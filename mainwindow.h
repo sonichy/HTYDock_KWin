@@ -47,6 +47,7 @@ private slots:
     void trashChanged(QString path);
     void windowAdded(WId wid);
     void windowRemoved(WId wid);
+    void activeWindowChanged(WId wid);
     void windowChanged(WId wid, NET::Properties properties, NET::Properties2 properties2);
 
 };

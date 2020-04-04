@@ -103,6 +103,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(KWindowSystem::self(), &KWindowSystem::windowAdded, this, &MainWindow::windowAdded);
     connect(KWindowSystem::self(), &KWindowSystem::windowRemoved, this, &MainWindow::windowRemoved);
     //connect(KWindowSystem::self(), static_cast<void(KWindowSystem::*)(WId, NET::Properties, NET::Properties2)>(&KWindowSystem::windowChanged), this, &MainWindow::windowChanged);
+    connect(KWindowSystem::self(), &KWindowSystem::activeWindowChanged, this, &MainWindow::activeWindowChanged);
     refit();
 }
 
@@ -236,6 +237,19 @@ void MainWindow::windowChanged(WId wid, NET::Properties properties, NET::Propert
 {
     KWindowInfo winInfo(wid, properties, properties2);
     qDebug() << winInfo.name() << winInfo.windowClassClass();
+}
+
+void MainWindow::activeWindowChanged(WId wid)
+{
+    for(int i=0; i<buttonGroup->buttons().count(); i++){
+        buttonGroup->buttons().at(i)->setProperty("class", "");
+    }
+    for(int i=0; i<buttonGroup->buttons().count(); i++){
+        Dock *dock = (Dock*)(buttonGroup->buttons().at(i)->userData(DOCK));
+        if(dock->wid == wid)
+            buttonGroup->buttons().at(i)->setProperty("class", "CurrentButton");
+    }
+    setStyleSheet(qss);
 }
 
 void MainWindow::buttonClicked(QAbstractButton *button)

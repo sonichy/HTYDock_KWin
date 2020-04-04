@@ -16,7 +16,7 @@ private:
 //        ANALOG_CLOCK
 //    } clock_type;
     QString clock_type;
-    bool isMouseOn;
+    bool isMouseOn = false;
 
 protected:
     void paintEvent(QPaintEvent *event);
