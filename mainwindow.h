@@ -3,6 +3,7 @@
 
 #define DOCK Qt::UserRole
 
+#include "datetimewidget.h"
 #include <QMainWindow>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -29,18 +30,26 @@ public:
     ~MainWindow();
 
 private:
+    enum {
+        BIG,
+        MEDIUM,
+        SMALL
+    } dock_size;
     int h;
-    QString qss, dir_trash;
+    QString qss, dir_trash, mode, position;
     QWidget *widget_app;
-    QPushButton *pushButton_trash;
-    QHBoxLayout *hbox_app;
+    QPushButton *pushButton_launcher, *pushButton_trash, *pushButton_desktop;
+    QBoxLayout *boxLayout, *boxLayout_app;
     QSize size;
     QButtonGroup *buttonGroup;
-    void refit();
     NET::Properties properties = NET::WMState | NET::XAWMState | NET::WMDesktop |  NET::WMVisibleName | NET::WMGeometry | NET::WMWindowType;
     NET::Properties2 properties2 = NET::WM2WindowClass | NET::WM2AllowedActions | NET::WM2DesktopFileName;
     QList<Dock*> list_dock;
     QSettings settings;
+    DatetimeWidget *datetimeWidget;
+    void addMenus();
+    void refit();
+    void resizeIcon(int w);
 
 private slots:
     void buttonClicked(QAbstractButton *button);

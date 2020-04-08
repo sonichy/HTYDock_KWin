@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include "datetimewidget.h"
 #include <QApplication>
 #include <QDesktopWidget>
 #include <QDesktopServices>
@@ -20,9 +19,12 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     ,settings(QCoreApplication::organizationName(), QCoreApplication::applicationName())
 {
-    h = 60;
-    size.setWidth(40);
-    size.setHeight(40);
+    int w = settings.value("IconSize", 40).toInt();
+    mode = settings.value("Mode", "Fashion").toString();
+    position = settings.value("Position", "Bottom").toString();
+    size.setWidth(w);
+    size.setHeight(w);
+    h = w + 20;
     qss = ".CurrentButton { background-color: rgba(48,140,198,0.5); border-radius:10px; }"
           ".CurrentButton:hover { background-color: rgba(48,140,198,0.5); }"
           "QTooltip { color: white; border: 1px solid white; background-color: white; }"
@@ -36,36 +38,46 @@ MainWindow::MainWindow(QWidget *parent)
     KWindowSystem::setType(winId(), NET::Dock);
     setFixedHeight(h);
     QWidget *widget = new QWidget;
-    QHBoxLayout *hbox = new QHBoxLayout;
-    widget->setLayout(hbox);
+    QBoxLayout::Direction direction;
+    if (position == "Top" && position == "Bottom") {
+        direction = QBoxLayout::LeftToRight;
+    } else if (position == "Left" && position == "Right") {
+        direction = QBoxLayout::TopToBottom;
+    }
+    boxLayout = new QBoxLayout(direction);
+    boxLayout->setMargin(0);
+    widget->setLayout(boxLayout);
     setCentralWidget(widget);
 
-    QPushButton *pushButton = new QPushButton(QIcon(":/launcher.png"), NULL);
-    pushButton->setFixedSize(size + QSize(6,6));
-    pushButton->setIconSize(size);
-    pushButton->setToolTip("启动器");
-    connect(pushButton, &QPushButton::pressed, [](){
+    pushButton_launcher = new QPushButton(QIcon(":/launcher.png"), NULL);
+    pushButton_launcher->setFixedSize(size + QSize(6,6));
+    pushButton_launcher->setIconSize(size);
+    pushButton_launcher->setToolTip("启动器");
+    connect(pushButton_launcher, &QPushButton::pressed, [](){
         QProcess::startDetached("HTYStartMenu");
     });
-    hbox->addWidget(pushButton);
+    boxLayout->addWidget(pushButton_launcher);
 
     buttonGroup = new QButtonGroup;
     connect(buttonGroup, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClicked(QAbstractButton*)));
     widget_app = new QWidget;
-    hbox_app = new QHBoxLayout;
-    hbox_app->setMargin(0);
-    widget_app->setLayout(hbox_app);
-    hbox->addWidget(widget_app);
+    boxLayout_app = new QBoxLayout(direction);
+    boxLayout_app->setMargin(0);
+    widget_app->setLayout(boxLayout_app);
+    boxLayout->addWidget(widget_app);
+
+    boxLayout->addStretch();
 
     pushButton_trash = new QPushButton(QIcon::fromTheme("user-trash"), NULL);
     pushButton_trash->setFixedSize(size + QSize(6,6));
     pushButton_trash->setIconSize(size);
     connect(pushButton_trash, &QPushButton::pressed, [](){
-         //QDesktopServices::openUrl(QUrl(QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/.local/share/Trash/files"));
+         //QDesktopServices::openUrl(QUrl(QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/.local/share/Trash/files")); //真实地址
         QProcess::startDetached("gio", QStringList() << "open" << "trash:///");
     });
     pushButton_trash->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(pushButton_trash, &QPushButton::customContextMenuRequested, [=](){
+        //[&](const QPoint& pos)
         QMenu *menu = new QMenu;
         menu->setStyleSheet("QMenu { color:white; background: rgba(0,0,0,100);}"
                             "QMenu::item:selected { background: rgba(48,140,198,255);}");
@@ -77,9 +89,24 @@ MainWindow::MainWindow(QWidget *parent)
         });
         menu->addAction(action_empty_trash);
         menu->adjustSize();//不加会到屏幕中间
-        menu->exec(QPoint(pushButton_trash->mapToGlobal(QPoint(0,0)).x() + pushButton->width()/2 - menu->width()/2, y() - menu->height()));
+        //menu->exec(pushButton_trash->mapToGlobal(pos));
+        int x1, y1;
+        if (position == "Top") {
+            x1 = QPoint(pushButton_trash->mapToGlobal(QPoint(0,0))).x() + pushButton_trash->width()/2 - menu->width()/2;
+            y1 = height();
+        } else if (position == "Bottom") {
+            x1 = QPoint(pushButton_trash->mapToGlobal(QPoint(0,0))).x() + pushButton_trash->width()/2 - menu->width()/2;
+            y1 = y() - menu->height();
+        } else if (position == "Left") {
+            x1 = width();
+            y1 = QPoint(pushButton_trash->mapToGlobal(QPoint(0,0))).y() + pushButton_trash->height()/2 - menu->height()/2;
+        } else if (position == "Right") {
+            x1 = QApplication::desktop()->width() - width() - menu->width();
+            y1 = QPoint(pushButton_trash->mapToGlobal(QPoint(0,0))).y() + pushButton_trash->height()/2 - menu->height()/2;
+        }
+        menu->exec(QPoint(x1, y1));
     });
-    hbox->addWidget(pushButton_trash);
+    boxLayout->addWidget(pushButton_trash);
     QFileSystemWatcher *FSW = new QFileSystemWatcher;
     dir_trash = QDir::homePath() + "/.local/share/Trash/files";
     qDebug() << dir_trash;
@@ -87,23 +114,25 @@ MainWindow::MainWindow(QWidget *parent)
     connect(FSW, SIGNAL(directoryChanged(QString)), this, SLOT(trashChanged(QString)));
     trashChanged("");
 
-    DatetimeWidget *datetimeWidget = new DatetimeWidget;
+    datetimeWidget = new DatetimeWidget;
     datetimeWidget->setFixedSize(size + QSize(6,6));
-    hbox->addWidget(datetimeWidget);
+    boxLayout->addWidget(datetimeWidget);
 
-    pushButton = new QPushButton(QIcon::fromTheme("computer"), NULL);
-    pushButton->setFixedSize(size + QSize(6,6));
-    pushButton->setIconSize(size);
-    pushButton->setToolTip("显示桌面");
-    connect(pushButton, &QPushButton::pressed, [](){
+    pushButton_desktop = new QPushButton(QIcon::fromTheme("computer"), NULL);
+    pushButton_desktop->setFixedSize(size + QSize(6,6));
+    pushButton_desktop->setIconSize(size);
+    pushButton_desktop->setToolTip("显示桌面");
+    connect(pushButton_desktop, &QPushButton::pressed, [](){
         KWindowSystem::setShowingDesktop(!KWindowSystem::showingDesktop());
     });
-    hbox->addWidget(pushButton);
+    boxLayout->addWidget(pushButton_desktop);
 
     connect(KWindowSystem::self(), &KWindowSystem::windowAdded, this, &MainWindow::windowAdded);
     connect(KWindowSystem::self(), &KWindowSystem::windowRemoved, this, &MainWindow::windowRemoved);
     //connect(KWindowSystem::self(), static_cast<void(KWindowSystem::*)(WId, NET::Properties, NET::Properties2)>(&KWindowSystem::windowChanged), this, &MainWindow::windowChanged);
     connect(KWindowSystem::self(), &KWindowSystem::activeWindowChanged, this, &MainWindow::activeWindowChanged);
+
+    addMenus();
     refit();
 }
 
@@ -112,19 +141,278 @@ MainWindow::~MainWindow()
 
 }
 
+void MainWindow::addMenus()
+{
+    //右键菜单
+    QAction *action = new QAction("模式", this);
+    QMenu *menu = new QMenu;
+    QAction *action_mode_fashion = new QAction("时尚", menu);
+    QAction *action_mode_efficient = new QAction("高效", menu);
+    action_mode_fashion->setCheckable(true);
+    action_mode_efficient->setCheckable(true);
+    if (mode == "Fashion")
+        action_mode_fashion->setChecked(true);
+    else if (mode == "Efficient")
+        action_mode_efficient->setChecked(true);
+    connect(action_mode_fashion, &QAction::triggered, [=](){
+        mode = "Fashion";
+        settings.setValue("Mode", mode);
+        refit();
+    });
+    connect(action_mode_efficient, &QAction::triggered, [=](){
+        mode = "Efficient";
+        settings.setValue("Mode", mode);
+        refit();
+    });
+    QActionGroup *actionGroup = new QActionGroup(this);
+    menu->addAction(actionGroup->addAction(action_mode_fashion));
+    menu->addAction(actionGroup->addAction(action_mode_efficient));
+    action->setMenu(menu);
+    addAction(action);
+
+    action = new QAction("位置", this);
+    menu = new QMenu;
+    QAction *action_position_top = new QAction("上", menu);
+    QAction *action_position_bottom = new QAction("下", menu);
+    QAction *action_position_left = new QAction("左", menu);
+    QAction *action_position_right = new QAction("右", menu);
+    action_position_top->setCheckable(true);
+    action_position_bottom->setCheckable(true);
+    action_position_left->setCheckable(true);
+    action_position_right->setCheckable(true);
+    if (position == "Top")
+        action_position_top->setChecked(true);
+    else if (position == "Bottom")
+        action_position_bottom->setChecked(true);
+    else if (position == "Left")
+        action_position_left->setChecked(true);
+    else if (position == "Right")
+        action_position_right->setChecked(true);
+    connect(action_position_top, &QAction::triggered, [=](){
+        position = "Top";
+        settings.setValue("Position", position);
+        refit();
+    });
+    connect(action_position_bottom, &QAction::triggered, [=](){
+        position = "Bottom";
+        settings.setValue("Position", position);
+        refit();
+    });
+    connect(action_position_left, &QAction::triggered, [=](){
+        position = "Left";
+        settings.setValue("Position", position);
+        refit();
+    });
+    connect(action_position_right, &QAction::triggered, [=](){
+        position = "Right";
+        settings.setValue("Position", position);
+        refit();
+    });
+    actionGroup = new QActionGroup(this);
+    menu->addAction(actionGroup->addAction(action_position_top));
+    menu->addAction(actionGroup->addAction(action_position_bottom));
+    menu->addAction(actionGroup->addAction(action_position_left));
+    menu->addAction(actionGroup->addAction(action_position_right));
+    action->setMenu(menu);
+    addAction(action);
+
+    action = new QAction("大小", this);
+    QAction *action_size_big = new QAction("大", menu);
+    QAction *action_size_medium = new QAction("中", menu);
+    QAction *action_size_small = new QAction("小", menu);
+    action_size_big->setCheckable(true);
+    action_size_medium->setCheckable(true);
+    action_size_small->setCheckable(true);
+    int w = settings.value("IconSize", 40).toInt();
+    if (w == 50) {
+        action_size_big->setChecked(true);
+    } else if (w == 40) {
+        action_size_medium->setChecked(true);
+    } else if (w == 30) {
+        action_size_small->setChecked(true);
+    }
+    connect(action_size_big, &QAction::triggered, [=](){
+        resizeIcon(50);
+        settings.setValue("IconSize", 50);
+    });
+    connect(action_size_medium, &QAction::triggered, [=](){
+        resizeIcon(40);
+        settings.setValue("IconSize", 40);
+    });
+    connect(action_size_small, &QAction::triggered, [=](){
+        resizeIcon(30);
+        settings.setValue("IconSize", 30);
+    });
+    actionGroup = new QActionGroup(this);
+    menu = new QMenu;
+    menu->addAction(actionGroup->addAction(action_size_big));
+    menu->addAction(actionGroup->addAction(action_size_medium));
+    menu->addAction(actionGroup->addAction(action_size_small));
+    action->setMenu(menu);
+    addAction(action);
+
+    action = new QAction("状态", this);
+    QAction *action_always_show = new QAction("总是显示", menu);
+    QAction *action_always_hide = new QAction("总是隐藏", menu);
+    QAction *action_smart_hide = new QAction("智能隐藏", menu);
+    action_always_show->setCheckable(true);
+    action_always_hide->setCheckable(true);
+    action_smart_hide->setCheckable(true);
+    actionGroup = new QActionGroup(this);
+    menu = new QMenu;
+    menu->addAction(actionGroup->addAction(action_always_show));
+    menu->addAction(actionGroup->addAction(action_always_hide));
+    menu->addAction(actionGroup->addAction(action_smart_hide));
+    action->setMenu(menu);
+    addAction(action);
+
+    action = new QAction("插件", this);
+    QAction *action_plugin_trash = new QAction("回收站", menu);
+    QAction *action_plugin_clock = new QAction("时钟", menu);
+    action_plugin_trash->setCheckable(true);
+    action_plugin_clock->setCheckable(true);
+    connect(action_plugin_trash, &QAction::triggered, [=](bool b){
+        if (b){
+            pushButton_trash->show();
+            settings.setValue("isShowTrash", true);
+        } else {
+            pushButton_trash->hide();
+            settings.setValue("isShowTrash", false);
+        }
+        refit();
+    });
+    connect(action_plugin_clock, &QAction::triggered, [=](bool b){
+        if (b){
+            datetimeWidget->show();
+        settings.setValue("isShowClock", true);
+        } else {
+            datetimeWidget->hide();
+            settings.setValue("isShowClock", false);
+        }
+        refit();
+    });
+    bool b = settings.value("isShowTrash", true).toBool();
+    if (b)
+        action_plugin_trash->setChecked(true);
+    else
+        pushButton_trash->hide();
+    b = settings.value("isShowClock", true).toBool();
+    if (b)
+        action_plugin_clock->setChecked(true);
+    else
+        datetimeWidget->hide();
+    menu = new QMenu;
+    menu->addAction(action_plugin_trash);
+    menu->addAction(action_plugin_clock);
+    action->setMenu(menu);
+    addAction(action);
+
+    setContextMenuPolicy(Qt::ActionsContextMenu);
+}
+
+void MainWindow::resizeIcon(int w)
+{
+    size.setWidth(w);
+    size.setHeight(w);
+    if (w == 50)
+        h = w + 20;
+    else if (w == 40)
+        h = w + 10;
+    else if (w == 30)
+        h = w + 6;
+    for (int i=0; i<buttonGroup->buttons().count(); i++) {
+        buttonGroup->buttons().at(i)->setFixedSize(size + QSize(w/10,w/10));
+        buttonGroup->buttons().at(i)->setIconSize(size);
+    }
+    pushButton_launcher->setFixedSize(size+ QSize(w/10,w/10));
+    pushButton_launcher->setIconSize(size);
+    pushButton_trash->setFixedSize(size+ QSize(w/10,w/10));
+    pushButton_trash->setIconSize(size);
+    pushButton_desktop->setFixedSize(size+ QSize(w/10,w/10));
+    pushButton_desktop->setIconSize(size);
+    datetimeWidget->setFixedSize(size);
+    refit();
+}
+
 void MainWindow::refit()
 {
-    qDebug() << buttonGroup->buttons().count();
-    resize((buttonGroup->buttons().count() + 6) * size.width() + 6*2, h);
-    move(QApplication::desktop()->width()/2 - width()/2, QApplication::desktop()->height() - height());
-    QRegion region(rect());
+    //qDebug() << buttonGroup->buttons().count();
+    int w, x1, y1;
+    if (position == "Bottom") {
+        boxLayout->setDirection(QBoxLayout::LeftToRight);
+        boxLayout_app->setDirection(QBoxLayout::LeftToRight);
+        if (mode == "Fashion")
+            w = (buttonGroup->buttons().count() + 6) * size.width() + 6*2;
+        else if (mode == "Efficient")
+            w = QApplication::desktop()->width();
+        int sh = size.height();
+        if (sh == 50)
+            h = sh + 20;
+        else if (sh == 40)
+            h = sh + 10;
+        else if (sh == 30)
+            h = sh + 6;
+        x1 = QApplication::desktop()->width()/2 - w/2;
+        y1 = QApplication::desktop()->height() - h;
+    } else if (position == "Top") {
+        boxLayout->setDirection(QBoxLayout::LeftToRight);
+        boxLayout_app->setDirection(QBoxLayout::LeftToRight);
+        if (mode == "Fashion")
+            w = (buttonGroup->buttons().count() + 6) * size.width() + 6*2;
+        else if (mode == "Efficient")
+            w = QApplication::desktop()->width();
+        h = size.height();
+        x1 = QApplication::desktop()->width()/2 - w/2;
+        y1 = 0;
+    } else if (position == "Left") {
+        boxLayout->setDirection(QBoxLayout::TopToBottom);
+        boxLayout_app->setDirection(QBoxLayout::TopToBottom);
+        w = size.width();
+        if (mode == "Fashion")
+            h = (buttonGroup->buttons().count() + 6) * size.height() + 6*2;
+        else if (mode == "Efficient")
+            h = QApplication::desktop()->height();
+        x1 = 0;
+        y1 = QApplication::desktop()->height()/2 - h/2;
+    } else if (position == "Right") {
+        boxLayout->setDirection(QBoxLayout::TopToBottom);
+        boxLayout_app->setDirection(QBoxLayout::TopToBottom);
+        w = size.width();
+        if (mode == "Fashion")
+            h = (buttonGroup->buttons().count() + 6) * size.width() + 6*2;
+        else if (mode == "Efficient")
+            h = QApplication::desktop()->height();
+        x1 = QApplication::desktop()->width() - size.width();
+        y1 = QApplication::desktop()->height()/2 - h/2;
+    }
+    resize(w, h);
+    setFixedSize(w, h);
+    move(x1, y1);
+    //qDebug() << position << x1 << y1 << w << h;
+
     //区域模糊
+    QRegion region(rect());
     KWindowEffects::enableBlurBehind(winId(), true, region);
+
     //挤开桌面。为什么只需要3个参数？从各边减去width。
     NETExtendedStrut strut;
-    strut.bottom_width = height();
-    strut.bottom_start = x();
-    strut.bottom_end = x() + width();
+    if (position == "Bottom") {
+        strut.bottom_width = height();
+        strut.bottom_start = x();
+        strut.bottom_end = x() + width();
+    } else if (position == "Top") {
+        strut.top_width = height();
+        strut.top_start = x();
+        strut.top_end = x() + width();
+    } else if (position == "Left") {
+        strut.left_width = width();
+        strut.left_start = y();
+        strut.left_end = y() + height();
+    } else if (position == "Right") {
+        strut.right_width = width();
+        strut.right_start = y();
+        strut.right_end = y() + height();
+    }
     KWindowSystem::setExtendedStrut(winId(),
                                     strut.left_width, strut.left_start, strut.left_end,
                                     strut.right_width, strut.right_start, strut.right_end,
@@ -139,10 +427,10 @@ void MainWindow::windowAdded(WId wid)
     if (!NET::typeMatchesMask(winInfo.windowType(NET::AllTypesMask), NET::NormalMask | NET::OverrideMask)) {
         //QMetaEnum metaEnum = QMetaEnum::fromType<NET::WindowTypeMask>();
         //metaEnum.valueToKey(winInfo.windowType(NET::AllTypesMask));
-        qDebug() << winInfo.windowClassClass() << winInfo.windowType(NET::AllTypesMask);
+        //qDebug() << winInfo.windowClassClass() << winInfo.windowType(NET::AllTypesMask);
         return;
     }
-    qDebug() << winInfo.name() << winInfo.windowClassClass(); // >=5.29 winInfo.desktopFileName();
+    //qDebug() << winInfo.name() << winInfo.windowClassClass(); // >=5.29 winInfo.desktopFileName();
     if (winInfo.windowClassClass() == "")
         return;
     Dock *dock = new Dock;
@@ -151,6 +439,8 @@ void MainWindow::windowAdded(WId wid)
     dock->className = winInfo.windowClassClass();
     list_dock.append(dock);
     QIcon icon = QIcon::fromTheme(winInfo.windowClassClass().toLower());
+//    if(winInfo.windowClassClass().toLower() == "kdevelop")
+//        icon = QIcon();
     //非系统程序图标获取
     if (icon.isNull()) {
         int pid = NETWinInfo(QX11Info::connection(), wid, QX11Info::appRootWindow(), NET::WMPid).pid();
@@ -161,29 +451,32 @@ void MainWindow::windowAdded(WId wid)
         file.close();
         QList<QByteArray> list_BA = BA.split('\0');
         for(int i=0; i<list_BA.length(); i++){
+            //qDebug() << list_BA.at(i);
             if(list_BA.at(i).startsWith("GIO_LAUNCHED_DESKTOP_FILE=")){
                 desktop_file_path = list_BA.at(i);
-                qDebug() << desktop_file_path;
+                //qDebug() << desktop_file_path;
                 desktop_file_path = desktop_file_path.mid(desktop_file_path.indexOf("=") + 1);
-                qDebug() << desktop_file_path;
+                //qDebug() << desktop_file_path;
                 break;
             }
         }
 
-        QString icon_path = "";
-        file.setFileName(desktop_file_path);
-        file.open(QIODevice::ReadOnly);
-        BA = file.readAll();
-        file.close();
-        list_BA = BA.split('\n');
-        for(int i=0; i<list_BA.length(); i++){
-            if(list_BA.at(i).toLower().startsWith("icon=")){
-                icon_path = list_BA.at(i);
-                qDebug() << list_BA.at(i);
-                icon_path = icon_path.mid(icon_path.indexOf("=") + 1);
-                qDebug() << icon_path;
-                icon = QIcon(icon_path);
-                break;
+        if (desktop_file_path != "") {
+            QString icon_path = "";
+            file.setFileName(desktop_file_path);
+            file.open(QIODevice::ReadOnly);
+            BA = file.readAll();
+            file.close();
+            list_BA = BA.split('\n');
+            for(int i=0; i<list_BA.length(); i++){
+                if(list_BA.at(i).toLower().startsWith("icon=")){
+                    icon_path = list_BA.at(i);
+                    //qDebug() << list_BA.at(i);
+                    icon_path = icon_path.mid(icon_path.indexOf("=") + 1);
+                    //qDebug() << icon_path;
+                    icon = QIcon(icon_path);
+                    break;
+                }
             }
         }
         if (icon.isNull())
@@ -208,9 +501,23 @@ void MainWindow::windowAdded(WId wid)
         });
         menu->addAction(action_close);
         menu->adjustSize();//不加会到屏幕中间
-        menu->exec(QPoint(pushButton->mapToGlobal(QPoint(0,0)).x() + pushButton->width()/2 - menu->width()/2, y() - menu->height()));
+        int x1, y1;
+        if (position == "Top") {
+            x1 = QPoint(pushButton->mapToGlobal(QPoint(0,0))).x() + pushButton->width()/2 - menu->width()/2;
+            y1 = height();
+        } else if (position == "Bottom") {
+            x1 = QPoint(pushButton->mapToGlobal(QPoint(0,0))).x() + pushButton->width()/2 - menu->width()/2;
+            y1 = y() - menu->height();
+        } else if (position == "Left") {
+            x1 = width();
+            y1 = QPoint(pushButton->mapToGlobal(QPoint(0,0))).y() + pushButton->height()/2 - menu->height()/2;
+        } else if (position == "Right") {
+            x1 = QApplication::desktop()->width() - width() - menu->width();
+            y1 = QPoint(pushButton->mapToGlobal(QPoint(0,0))).y() + pushButton->height()/2 - menu->height()/2;
+        }
+        menu->exec(QPoint(x1, y1));
     });
-    hbox_app->addWidget(pushButton);
+    boxLayout_app->addWidget(pushButton);
     buttonGroup->addButton(pushButton);
     refit();
 }
@@ -222,7 +529,7 @@ void MainWindow::windowRemoved(WId wid)
         Dock *dock = (Dock*)(button->userData(DOCK));
         if (dock->wid == wid) {
             //qDebug() << dock->wid;
-            hbox_app->removeWidget(button);
+            boxLayout_app->removeWidget(button);
             buttonGroup->removeButton(button);
 //            connect(button, &QAbstractButton::destroyed, [=](){
 //                refit();

@@ -87,16 +87,20 @@ void DatetimeWidget::paintEvent(QPaintEvent *event)
     } else if(clock_type == "ANALOG_CLOCK") {
         int w = width() - 6;
         int h = height() - 6;
+        QPixmap pixmap(w, h);
+        pixmap.fill(Qt::transparent);
+        QPainter painter1(&pixmap);
+        painter1.setRenderHint(QPainter::Antialiasing, true);
         QTime time = QTime::currentTime();
         int hour = time.hour();
         int m = time.minute();
         int s = time.second();
         // face
-        painter.setPen(QPen(Qt::black, 2));
-        painter.setBrush(QBrush(Qt::white));
-        painter.drawEllipse(QPoint(w/2,h/2), (int)(w/2*0.9), (int)(h/2*0.9));
-        painter.setBrush(QBrush(Qt::black));
-        painter.drawEllipse(QPoint(w/2,h/2), (int)(w*0.015), (int)(h*0.015));
+        painter1.setPen(QPen(Qt::black, 2));
+        painter1.setBrush(QBrush(Qt::white));
+        painter1.drawEllipse(QPoint(w/2,h/2), (int)(w/2*0.9), (int)(h/2*0.9));
+        painter1.setBrush(QBrush(Qt::black));
+        painter1.drawEllipse(QPoint(w/2,h/2), (int)(w*0.015), (int)(h*0.015));
         // mark
         qreal da = 2 * M_PI / 60;
         for(int i=0; i<12; i++){
@@ -106,26 +110,28 @@ void DatetimeWidget::paintEvent(QPaintEvent *event)
             int y1 = - r * qSin(M_PI/2 - i * da * 60 / 12) + h/2;
             int x2 = w * 0.425 * qCos(M_PI/2 - i * da* 60 / 12) + w/2;
             int y2 = - h * 0.425 * qSin(M_PI/2 - i * da* 60 / 12) + h/2;
-            painter.setPen(QPen(Qt::black,1));
-            painter.drawLine(QPoint(x1,y1), QPoint(x2,y2));
+            painter1.setPen(QPen(Qt::black,1));
+            painter1.drawLine(QPoint(x1,y1), QPoint(x2,y2));
         }
         // second hand
         int x = w * 0.4 * qCos(M_PI/2 - s * da) + w / 2;
         int y = - h * 0.4 * qSin(M_PI/2 - s * da) + h / 2;
-        painter.setPen(QPen(Qt::black, 1));
-        painter.drawLine(QPoint(w/2,h/2), QPoint(x,y));
+        painter1.setPen(QPen(Qt::black, 1));
+        painter1.drawLine(QPoint(w/2,h/2), QPoint(x,y));
         // minute hand
         x = w * 0.35 * qCos(M_PI/2 - m * da - s * da / 60) + w / 2;
         y = - h * 0.35 * qSin(M_PI/2 - m * da - s * da / 60) + h / 2;
-        painter.setPen(QPen(Qt::black, 2));
-        painter.drawLine(QPoint(w/2,h/2), QPoint(x,y));
+        painter1.setPen(QPen(Qt::black, 2));
+        painter1.drawLine(QPoint(w/2,h/2), QPoint(x,y));
         // hour hand
         da = 2 * M_PI / 12;
         if(hour >= 12) hour -= 12;
         x = w*0.25 * qCos(M_PI/2 - hour * da - m * da / 60) + w/2;
         y = - h*0.25 * qSin(M_PI/2 - hour * da - m * da / 60) + h/2;
         //qDebug() << "x =" << x << ", y =" << y;
-        painter.setPen(QPen(Qt::black, 2));
-        painter.drawLine(QPoint(w/2,h/2), QPoint(x,y));
+        painter1.setPen(QPen(Qt::black, 2));
+        painter1.drawLine(QPoint(w/2,h/2), QPoint(x,y));
+
+        painter.drawPixmap(rect().center() - QPoint(w/2-1,h/2-1), pixmap);
     }
 }
