@@ -2,6 +2,8 @@
 #define DATETIMEWIDGET_H
 
 #include <QWidget>
+#include <QCalendarWidget>
+#include <QMouseEvent>
 
 class DatetimeWidget : public QWidget
 {
@@ -17,11 +19,13 @@ private:
 //    } clock_type;
     QString clock_type;
     bool isMouseOn = false;
+    QCalendarWidget *calendar;
 
 protected:
     void paintEvent(QPaintEvent *event);
     void enterEvent(QEvent *event);
     void leaveEvent(QEvent *event);
+    void mousePressEvent(QMouseEvent *event);
 
 signals:
 

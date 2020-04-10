@@ -5,8 +5,9 @@
 #include <QAction>
 #include <QtMath>
 #include <QSettings>
-#include <QCoreApplication>
-//#include <QMetaEnum>
+#include <QApplication>
+#include <QDesktopWidget>
+#include <QDebug>
 
 DatetimeWidget::DatetimeWidget(QWidget *parent) : QWidget(parent)
 {
@@ -44,6 +45,9 @@ DatetimeWidget::DatetimeWidget(QWidget *parent) : QWidget(parent)
     });
     addAction(action_analog);
     setContextMenuPolicy(Qt::ActionsContextMenu);
+
+    calendar = new QCalendarWidget;
+    calendar->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
 }
 
 void DatetimeWidget::enterEvent(QEvent *event)
@@ -133,5 +137,37 @@ void DatetimeWidget::paintEvent(QPaintEvent *event)
         painter1.drawLine(QPoint(w/2,h/2), QPoint(x,y));
 
         painter.drawPixmap(rect().center() - QPoint(w/2-1,h/2-1), pixmap);
+    }
+}
+
+void DatetimeWidget::mousePressEvent(QMouseEvent *event)
+{
+    if(event->button() == Qt::LeftButton){
+        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+        QString position = settings.value("Position", "Bottom").toString();
+        if (calendar->isHidden()) {
+            int x1, y1;
+            if (position == "Bottom") {
+                x1 = mapToGlobal(QPoint(0,0)).x() + width()/2 - calendar->width()/2;
+                y1 = mapToGlobal(QPoint(0,0)).y() - calendar->height();
+            } else if (position == "Top") {
+                x1 = mapToGlobal(QPoint(0,0)).x() + width()/2 - calendar->width()/2;
+                y1 = height();
+            } else if (position == "Left") {
+                x1 = width();
+                y1 = mapToGlobal(QPoint(0,0)).y() + height()/2 - calendar->height()/2;
+            } else if (position == "Right") {
+                x1 = QApplication::desktop()->width() - width() - calendar->width();
+                y1 = mapToGlobal(QPoint(0,0)).y() + height()/2 - calendar->height()/2;
+            }
+            qDebug() << "QCalendarWidget" <<  x1 << y1;
+            calendar->move(x1, y1);
+            calendar->setSelectedDate(QDate::currentDate());
+            calendar->show();
+        } else {
+            calendar->hide();
+        }
+    } else {
+        calendar->hide();
     }
 }
