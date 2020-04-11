@@ -430,7 +430,7 @@ void MainWindow::windowAdded(WId wid)
         //qDebug() << winInfo.windowClassClass() << winInfo.windowType(NET::AllTypesMask);
         return;
     }
-    //qDebug() << winInfo.name() << winInfo.windowClassClass(); // >=5.29 winInfo.desktopFileName();
+    qDebug() << winInfo.name() << winInfo.windowClassClass(); // >=5.29 winInfo.desktopFileName();
     if (winInfo.windowClassClass() == "")
         return;
     Dock *dock = new Dock;
@@ -438,50 +438,9 @@ void MainWindow::windowAdded(WId wid)
     dock->name = winInfo.name();
     dock->className = winInfo.windowClassClass();
     list_dock.append(dock);
-    QIcon icon = QIcon::fromTheme(winInfo.windowClassClass().toLower());
-//    if(winInfo.windowClassClass().toLower() == "kdevelop")
-//        icon = QIcon();
-    //非系统程序图标获取
-    if (icon.isNull()) {
-        int pid = NETWinInfo(QX11Info::connection(), wid, QX11Info::appRootWindow(), NET::WMPid).pid();
-        QString desktop_file_path = "";
-        QFile file("/proc/" + QString::number(pid) + "/environ");
-        file.open(QIODevice::ReadOnly);
-        QByteArray BA = file.readAll();
-        file.close();
-        QList<QByteArray> list_BA = BA.split('\0');
-        for(int i=0; i<list_BA.length(); i++){
-            //qDebug() << list_BA.at(i);
-            if(list_BA.at(i).startsWith("GIO_LAUNCHED_DESKTOP_FILE=")){
-                desktop_file_path = list_BA.at(i);
-                //qDebug() << desktop_file_path;
-                desktop_file_path = desktop_file_path.mid(desktop_file_path.indexOf("=") + 1);
-                //qDebug() << desktop_file_path;
-                break;
-            }
-        }
 
-        if (desktop_file_path != "") {
-            QString icon_path = "";
-            file.setFileName(desktop_file_path);
-            file.open(QIODevice::ReadOnly);
-            BA = file.readAll();
-            file.close();
-            list_BA = BA.split('\n');
-            for(int i=0; i<list_BA.length(); i++){
-                if(list_BA.at(i).toLower().startsWith("icon=")){
-                    icon_path = list_BA.at(i);
-                    //qDebug() << list_BA.at(i);
-                    icon_path = icon_path.mid(icon_path.indexOf("=") + 1);
-                    //qDebug() << icon_path;
-                    icon = QIcon(icon_path);
-                    break;
-                }
-            }
-        }
-        if (icon.isNull())
-            icon = QIcon::fromTheme("application-x-executable");
-    }
+    QIcon icon;
+    icon.addPixmap(KWindowSystem::icon(wid));
 
     QPushButton *pushButton = new QPushButton(icon, NULL);
     pushButton->setFixedSize(size + QSize(6,6));
