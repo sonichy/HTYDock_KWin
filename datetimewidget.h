@@ -12,11 +12,6 @@ public:
     explicit DatetimeWidget(QWidget *parent = 0);
 
 private:
-//    enum {
-//        TEXT_CLOCK,
-//        DIGITAL_CLOCK,
-//        ANALOG_CLOCK
-//    } clock_type;
     QString clock_type;
     bool isMouseOn = false;
     QCalendarWidget *calendar;

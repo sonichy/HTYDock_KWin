@@ -15,10 +15,14 @@ CONFIG += c++11
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    datetimewidget.cpp
+    datetimewidget.cpp \
+    appwidget.cpp \
+    netspeedwidget.cpp
 
 HEADERS  += mainwindow.h \
-    datetimewidget.h
+    datetimewidget.h \
+    appwidget.h \
+    netspeedwidget.h
 
 RESOURCES += \
     res.qrc

@@ -67,6 +67,10 @@ void DatetimeWidget::leaveEvent(QEvent *event)
 void DatetimeWidget::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
+    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    bool b = settings.value("isShowClock", true).toBool();
+    if (!b)
+        return;
     QDateTime dateTime = QDateTime::currentDateTime();
     setToolTip(dateTime.toString("yyyy/MM/dd HH:mm:ss ddd"));
     QPainter painter(this);
@@ -105,18 +109,7 @@ void DatetimeWidget::paintEvent(QPaintEvent *event)
         painter1.drawEllipse(QPoint(w/2,h/2), (int)(w/2*0.9), (int)(h/2*0.9));
         painter1.setBrush(QBrush(Qt::black));
         painter1.drawEllipse(QPoint(w/2,h/2), (int)(w*0.015), (int)(h*0.015));
-        // mark
         qreal da = 2 * M_PI / 60;
-        for(int i=0; i<12; i++){
-            int r = w * 0.415;
-            //if(i % 5 == 0) r = w * 0.375;
-            int x1 = r * qCos(M_PI/2 - i * da * 60 / 12) + w/2;
-            int y1 = - r * qSin(M_PI/2 - i * da * 60 / 12) + h/2;
-            int x2 = w * 0.425 * qCos(M_PI/2 - i * da* 60 / 12) + w/2;
-            int y2 = - h * 0.425 * qSin(M_PI/2 - i * da* 60 / 12) + h/2;
-            painter1.setPen(QPen(Qt::black,1));
-            painter1.drawLine(QPoint(x1,y1), QPoint(x2,y2));
-        }
         // second hand
         int x = w * 0.4 * qCos(M_PI/2 - s * da) + w / 2;
         int y = - h * 0.4 * qSin(M_PI/2 - s * da) + h / 2;
@@ -135,8 +128,7 @@ void DatetimeWidget::paintEvent(QPaintEvent *event)
         //qDebug() << "x =" << x << ", y =" << y;
         painter1.setPen(QPen(Qt::black, 2));
         painter1.drawLine(QPoint(w/2,h/2), QPoint(x,y));
-
-        painter.drawPixmap(rect().center() - QPoint(w/2-1,h/2-1), pixmap);
+        painter.drawPixmap(rect().center() - pixmap.rect().center(), pixmap);
     }
 }
 

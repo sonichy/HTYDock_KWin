@@ -10,7 +10,6 @@
 #include <QX11Info>
 #include <QFileSystemWatcher>
 #include <QDir>
-#include <QMetaEnum>
 #include <KF5/KWindowSystem/KWindowSystem>
 #include <KF5/KWindowSystem/KWindowEffects>
 #include <KF5/KWindowSystem/netwm.h>
@@ -58,8 +57,6 @@ MainWindow::MainWindow(QWidget *parent)
     });
     boxLayout->addWidget(pushButton_launcher);
 
-    buttonGroup = new QButtonGroup;
-    connect(buttonGroup, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClicked(QAbstractButton*)));
     widget_app = new QWidget;
     boxLayout_app = new QBoxLayout(direction);
     boxLayout_app->setMargin(0);
@@ -117,6 +114,10 @@ MainWindow::MainWindow(QWidget *parent)
     datetimeWidget = new DatetimeWidget;
     datetimeWidget->setFixedSize(size + QSize(6,6));
     boxLayout->addWidget(datetimeWidget);
+
+    netSpeedWidget = new NetSpeedWidget;
+    netSpeedWidget->setFixedSize(size + QSize(6,6));
+    boxLayout->addWidget(netSpeedWidget);
 
     pushButton_desktop = new QPushButton(QIcon::fromTheme("computer"), NULL);
     pushButton_desktop->setFixedSize(size + QSize(6,6));
@@ -269,44 +270,80 @@ void MainWindow::addMenus()
     action = new QAction("插件", this);
     QAction *action_plugin_trash = new QAction("回收站", menu);
     QAction *action_plugin_clock = new QAction("时钟", menu);
+    QAction *action_plugin_netspeed = new QAction("网速", menu);
     action_plugin_trash->setCheckable(true);
     action_plugin_clock->setCheckable(true);
+    action_plugin_netspeed->setCheckable(true);
+
     connect(action_plugin_trash, &QAction::triggered, [=](bool b){
-        if (b){
+        if (b) {
             pushButton_trash->show();
             settings.setValue("isShowTrash", true);
+            count_plugin++;
         } else {
             pushButton_trash->hide();
             settings.setValue("isShowTrash", false);
+            count_plugin--;
         }
         refit();
     });
+
     connect(action_plugin_clock, &QAction::triggered, [=](bool b){
         if (b){
             datetimeWidget->show();
-        settings.setValue("isShowClock", true);
+            settings.setValue("isShowClock", true);
+            count_plugin++;
         } else {
             datetimeWidget->hide();
             settings.setValue("isShowClock", false);
+            count_plugin--;
         }
         refit();
     });
+
+    connect(action_plugin_netspeed, &QAction::triggered, [=](bool b){
+        if (b){
+            netSpeedWidget->show();
+            settings.setValue("isShowNetSpeed", true);
+            count_plugin++;
+        } else {
+            netSpeedWidget->hide();
+            settings.setValue("isShowNetSpeed", false);
+            count_plugin--;
+        }
+        refit();
+    });
+
     bool b = settings.value("isShowTrash", true).toBool();
-    if (b)
+    if (b){
         action_plugin_trash->setChecked(true);
-    else
+        count_plugin++;
+    } else {
         pushButton_trash->hide();
+    }
+
     b = settings.value("isShowClock", true).toBool();
-    if (b)
+    if (b) {
         action_plugin_clock->setChecked(true);
-    else
+        count_plugin++;
+    } else {
         datetimeWidget->hide();
+    }
+
+    b = settings.value("isShowNetSpeed", true).toBool();
+    if (b) {
+        action_plugin_netspeed->setChecked(true);
+        count_plugin++;
+    } else {
+        netSpeedWidget->hide();
+    }
+
     menu = new QMenu;
     menu->addAction(action_plugin_trash);
     menu->addAction(action_plugin_clock);
+    menu->addAction(action_plugin_netspeed);
     action->setMenu(menu);
     addAction(action);
-
     setContextMenuPolicy(Qt::ActionsContextMenu);
 }
 
@@ -320,9 +357,8 @@ void MainWindow::resizeIcon(int w)
         h = w + 10;
     else if (w == 30)
         h = w + 6;
-    for (int i=0; i<buttonGroup->buttons().count(); i++) {
-        buttonGroup->buttons().at(i)->setFixedSize(size + QSize(w/10,w/10));
-        buttonGroup->buttons().at(i)->setIconSize(size);
+    for (int i=0; i<list_appWidget.count(); i++) {
+        list_appWidget.at(i)->setFixedSize(size + QSize(w/10,w/10));
     }
     pushButton_launcher->setFixedSize(size+ QSize(w/10,w/10));
     pushButton_launcher->setIconSize(size);
@@ -331,18 +367,19 @@ void MainWindow::resizeIcon(int w)
     pushButton_desktop->setFixedSize(size+ QSize(w/10,w/10));
     pushButton_desktop->setIconSize(size);
     datetimeWidget->setFixedSize(size);
+    netSpeedWidget->setFixedSize(size);
     refit();
 }
 
 void MainWindow::refit()
 {
-    //qDebug() << buttonGroup->buttons().count();
+    qDebug() << count_plugin;
     int w, x1, y1;
     if (position == "Bottom") {
         boxLayout->setDirection(QBoxLayout::LeftToRight);
         boxLayout_app->setDirection(QBoxLayout::LeftToRight);
         if (mode == "Fashion")
-            w = (buttonGroup->buttons().count() + 6) * size.width() + 6*2;
+            w = (list_appWidget.count() + count_plugin + 3) * size.width();
         else if (mode == "Efficient")
             w = QApplication::desktop()->width();
         int sh = size.height();
@@ -358,7 +395,7 @@ void MainWindow::refit()
         boxLayout->setDirection(QBoxLayout::LeftToRight);
         boxLayout_app->setDirection(QBoxLayout::LeftToRight);
         if (mode == "Fashion")
-            w = (buttonGroup->buttons().count() + 6) * size.width() + 6*2;
+            w = (list_appWidget.count() + count_plugin + 3) * size.width();
         else if (mode == "Efficient")
             w = QApplication::desktop()->width();
         h = size.height();
@@ -369,7 +406,7 @@ void MainWindow::refit()
         boxLayout_app->setDirection(QBoxLayout::TopToBottom);
         w = size.width();
         if (mode == "Fashion")
-            h = (buttonGroup->buttons().count() + 6) * size.height() + 6*2;
+            h = (list_appWidget.count() + count_plugin + 3) * size.height();
         else if (mode == "Efficient")
             h = QApplication::desktop()->height();
         x1 = 0;
@@ -379,7 +416,7 @@ void MainWindow::refit()
         boxLayout_app->setDirection(QBoxLayout::TopToBottom);
         w = size.width();
         if (mode == "Fashion")
-            h = (buttonGroup->buttons().count() + 6) * size.width() + 6*2;
+            h = (list_appWidget.count() + count_plugin + 3) * size.width();
         else if (mode == "Efficient")
             h = QApplication::desktop()->height();
         x1 = QApplication::desktop()->width() - size.width();
@@ -388,7 +425,7 @@ void MainWindow::refit()
     resize(w, h);
     setFixedSize(w, h);
     move(x1, y1);
-    //qDebug() << position << x1 << y1 << w << h;
+    qDebug() << position << x1 << y1 << w << h;
 
     //区域模糊
     QRegion region(rect());
@@ -433,22 +470,18 @@ void MainWindow::windowAdded(WId wid)
     qDebug() << winInfo.name() << winInfo.windowClassClass(); // >=5.29 winInfo.desktopFileName();
     if (winInfo.windowClassClass() == "")
         return;
-    Dock *dock = new Dock;
-    dock->wid = wid;
-    dock->name = winInfo.name();
-    dock->className = winInfo.windowClassClass();
-    list_dock.append(dock);
-
-    QIcon icon;
-    icon.addPixmap(KWindowSystem::icon(wid));
-
-    QPushButton *pushButton = new QPushButton(icon, NULL);
-    pushButton->setFixedSize(size + QSize(6,6));
-    pushButton->setIconSize(size);
-    pushButton->setToolTip(winInfo.name());
-    pushButton->setUserData(DOCK, dock);
-    pushButton->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(pushButton, &QPushButton::customContextMenuRequested, [=](){
+    AppWidget *appWidget = new AppWidget;
+    appWidget->setFixedSize(size);
+    appWidget->wid = wid;
+    appWidget->name = winInfo.name();
+    appWidget->className = winInfo.windowClassClass();
+    appWidget->icon = KWindowSystem::icon(wid);
+    appWidget->setToolTip(winInfo.name());
+    connect(appWidget, &AppWidget::clicked, [=](){
+        buttonClicked(appWidget);
+    });
+    appWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(appWidget, &AppWidget::customContextMenuRequested, [=](){
         QMenu *menu = new QMenu;
         menu->setStyleSheet("QMenu { color:white; background: rgba(0,0,0,100);}"
                             "QMenu::item:selected { background: rgba(48,140,198,255);}");
@@ -462,38 +495,37 @@ void MainWindow::windowAdded(WId wid)
         menu->adjustSize();//不加会到屏幕中间
         int x1, y1;
         if (position == "Top") {
-            x1 = QPoint(pushButton->mapToGlobal(QPoint(0,0))).x() + pushButton->width()/2 - menu->width()/2;
+            x1 = QPoint(appWidget->mapToGlobal(QPoint(0,0))).x() + appWidget->width()/2 - menu->width()/2;
             y1 = height();
         } else if (position == "Bottom") {
-            x1 = QPoint(pushButton->mapToGlobal(QPoint(0,0))).x() + pushButton->width()/2 - menu->width()/2;
+            x1 = QPoint(appWidget->mapToGlobal(QPoint(0,0))).x() + appWidget->width()/2 - menu->width()/2;
             y1 = y() - menu->height();
         } else if (position == "Left") {
             x1 = width();
-            y1 = QPoint(pushButton->mapToGlobal(QPoint(0,0))).y() + pushButton->height()/2 - menu->height()/2;
+            y1 = QPoint(appWidget->mapToGlobal(QPoint(0,0))).y() + appWidget->height()/2 - menu->height()/2;
         } else if (position == "Right") {
             x1 = QApplication::desktop()->width() - width() - menu->width();
-            y1 = QPoint(pushButton->mapToGlobal(QPoint(0,0))).y() + pushButton->height()/2 - menu->height()/2;
+            y1 = QPoint(appWidget->mapToGlobal(QPoint(0,0))).y() + appWidget->height()/2 - menu->height()/2;
         }
         menu->exec(QPoint(x1, y1));
     });
-    boxLayout_app->addWidget(pushButton);
-    buttonGroup->addButton(pushButton);
+    boxLayout_app->addWidget(appWidget);
+    list_appWidget.append(appWidget);
     refit();
 }
 
 void MainWindow::windowRemoved(WId wid)
 {
-    for (int i=0; i<buttonGroup->buttons().count(); i++) {
-        QAbstractButton *button = buttonGroup->buttons().at(i);
-        Dock *dock = (Dock*)(button->userData(DOCK));
-        if (dock->wid == wid) {
+    for (int i=0; i<list_appWidget.count(); i++) {
+        AppWidget *appWidget = list_appWidget.at(i);
+        if (appWidget->wid == wid) {
             //qDebug() << dock->wid;
-            boxLayout_app->removeWidget(button);
-            buttonGroup->removeButton(button);
-//            connect(button, &QAbstractButton::destroyed, [=](){
+            boxLayout_app->removeWidget(appWidget);
+            list_appWidget.removeAt(i);
+//            connect(appWidget, &AppWidget::destroyed, [=](){
 //                refit();
 //            });
-            button->deleteLater();
+            appWidget->deleteLater();
             refit();
         }
     }
@@ -507,39 +539,39 @@ void MainWindow::windowChanged(WId wid, NET::Properties properties, NET::Propert
 
 void MainWindow::activeWindowChanged(WId wid)
 {
-    for(int i=0; i<buttonGroup->buttons().count(); i++){
-        buttonGroup->buttons().at(i)->setProperty("class", "");
+    for (int i=0; i<list_appWidget.count(); i++) {
+        AppWidget *appWidget = list_appWidget.at(i);
+        if (appWidget->wid == wid) {
+            appWidget->isActive = true;
+        } else {
+            appWidget->isActive = false;
+        }
+        appWidget->update();
     }
-    for(int i=0; i<buttonGroup->buttons().count(); i++){
-        Dock *dock = (Dock*)(buttonGroup->buttons().at(i)->userData(DOCK));
-        if(dock->wid == wid)
-            buttonGroup->buttons().at(i)->setProperty("class", "CurrentButton");
-    }
-    setStyleSheet(qss);
 }
 
-void MainWindow::buttonClicked(QAbstractButton *button)
+void MainWindow::buttonClicked(AppWidget *appWidget)
 {
-    for(int i=0; i<buttonGroup->buttons().count(); i++){
-        buttonGroup->buttons().at(i)->setProperty("class", "");
+    for (int i=0; i<list_appWidget.count(); i++) {
+        list_appWidget.at(i)->isActive = false;
+        list_appWidget.at(i)->update();
     }
-    button->setProperty("class", "CurrentButton");
-    setStyleSheet(qss);
-    Dock *dock = (Dock*)(button->userData(DOCK));
-    KWindowInfo winInfo(dock->wid, NET::WMState | NET::XAWMState | NET::WMDesktop | NET::WMVisibleName);
-    button->setToolTip(winInfo.name());//更新提示
+    appWidget->isActive = true;
+    appWidget->update();
+    KWindowInfo winInfo(appWidget->wid, NET::WMState | NET::XAWMState | NET::WMDesktop | NET::WMVisibleName);
+    appWidget->setToolTip(winInfo.name());//更新提示
     if (winInfo.isMinimized()) {
-        KWindowSystem::unminimizeWindow(dock->wid);
-        KWindowSystem::activateWindow(dock->wid);
+        KWindowSystem::unminimizeWindow(appWidget->wid);
+        KWindowSystem::activateWindow(appWidget->wid);
     } else {
-        if (KWindowSystem::activeWindow() == dock->wid) {
-            KWindowSystem::minimizeWindow(dock->wid);
-            for(int i=0; i<buttonGroup->buttons().count(); i++){
-                buttonGroup->buttons().at(i)->setProperty("class", "");
+        if (KWindowSystem::activeWindow() == appWidget->wid) {
+            KWindowSystem::minimizeWindow(appWidget->wid);
+            for(int i=0; i<list_appWidget.count(); i++){
+                list_appWidget.at(i)->setProperty("class", "");
             }
             setStyleSheet(qss);
         } else {
-            KWindowSystem::activateWindow(dock->wid);
+            KWindowSystem::activateWindow(appWidget->wid);
         }
     }
 }
