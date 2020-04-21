@@ -59,7 +59,7 @@ void AppWidget::paintEvent(QPaintEvent *event)
     Q_UNUSED(event);
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    //painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.setPen(Qt::NoPen);
     if (isActive) {
 //        QRadialGradient radialGradient(width()/2,height()/2,width()/3,width()/2,height()/2);
