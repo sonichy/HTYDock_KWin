@@ -4,6 +4,7 @@
 #include "datetimewidget.h"
 #include "netspeedwidget.h"
 #include "appwidget.h"
+#include "trashwidget.h"
 #include <QMainWindow>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -23,7 +24,7 @@ private:
     int h, count_plugin=0;
     QString qss, dir_trash, mode, position;
     QWidget *widget_app;
-    QPushButton *pushButton_launcher, *pushButton_trash, *pushButton_desktop;
+    QPushButton *pushButton_launcher, *pushButton_desktop;
     QBoxLayout *boxLayout, *boxLayout_app;
     QSize size;
     QList<AppWidget*> list_appWidget;
@@ -32,6 +33,7 @@ private:
     QSettings settings;
     DatetimeWidget *datetimeWidget;
     NetSpeedWidget *netSpeedWidget;
+    TrashWidget *trashWidget;
 
     void addMenus();
     void refit();

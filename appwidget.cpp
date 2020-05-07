@@ -84,5 +84,5 @@ void AppWidget::mousePressEvent(QMouseEvent *event)
 
 void AppWidget::mouseReleaseEvent(QMouseEvent *ev)
 {
-    if(point_mouse == QPoint(ev->x(), ev->y())) emit clicked();
+    if (point_mouse == QPoint(ev->x(), ev->y())) emit clicked();
 }

@@ -65,15 +65,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     boxLayout->addStretch();
 
-    pushButton_trash = new QPushButton(QIcon::fromTheme("user-trash"), NULL);
-    pushButton_trash->setFixedSize(size + QSize(6,6));
-    pushButton_trash->setIconSize(size);
-    connect(pushButton_trash, &QPushButton::pressed, [](){
+    //pushButton_trash = new QPushButton(QIcon::fromTheme("user-trash"), NULL);
+    //pushButton_trash->setFixedSize(size + QSize(6,6));
+    //pushButton_trash->setIconSize(size);
+    //connect(pushButton_trash, &QPushButton::pressed, [](){
          //QDesktopServices::openUrl(QUrl(QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/.local/share/Trash/files")); //真实地址
-        QProcess::startDetached("gio", QStringList() << "open" << "trash:///");
-    });
-    pushButton_trash->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(pushButton_trash, &QPushButton::customContextMenuRequested, [=](){
+    //    QProcess::startDetached("gio", QStringList() << "open" << "trash:///");
+    //});
+    trashWidget = new TrashWidget;
+    trashWidget->setFixedSize(size + QSize(6,6));
+    trashWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(trashWidget, &QPushButton::customContextMenuRequested, [=](){
         //[&](const QPoint& pos)
         QMenu *menu = new QMenu;
         menu->setStyleSheet("QMenu { color:white; background: rgba(0,0,0,100);}"
@@ -89,21 +91,21 @@ MainWindow::MainWindow(QWidget *parent)
         //menu->exec(pushButton_trash->mapToGlobal(pos));
         int x1, y1;
         if (position == "Top") {
-            x1 = QPoint(pushButton_trash->mapToGlobal(QPoint(0,0))).x() + pushButton_trash->width()/2 - menu->width()/2;
+            x1 = QPoint(trashWidget->mapToGlobal(QPoint(0,0))).x() + trashWidget->width()/2 - menu->width()/2;
             y1 = height();
         } else if (position == "Bottom") {
-            x1 = QPoint(pushButton_trash->mapToGlobal(QPoint(0,0))).x() + pushButton_trash->width()/2 - menu->width()/2;
+            x1 = QPoint(trashWidget->mapToGlobal(QPoint(0,0))).x() + trashWidget->width()/2 - menu->width()/2;
             y1 = y() - menu->height();
         } else if (position == "Left") {
             x1 = width();
-            y1 = QPoint(pushButton_trash->mapToGlobal(QPoint(0,0))).y() + pushButton_trash->height()/2 - menu->height()/2;
+            y1 = QPoint(trashWidget->mapToGlobal(QPoint(0,0))).y() + trashWidget->height()/2 - menu->height()/2;
         } else if (position == "Right") {
             x1 = QApplication::desktop()->width() - width() - menu->width();
-            y1 = QPoint(pushButton_trash->mapToGlobal(QPoint(0,0))).y() + pushButton_trash->height()/2 - menu->height()/2;
+            y1 = QPoint(trashWidget->mapToGlobal(QPoint(0,0))).y() + trashWidget->height()/2 - menu->height()/2;
         }
         menu->exec(QPoint(x1, y1));
     });
-    boxLayout->addWidget(pushButton_trash);
+    boxLayout->addWidget(trashWidget);
     QFileSystemWatcher *FSW = new QFileSystemWatcher;
     dir_trash = QDir::homePath() + "/.local/share/Trash/files";
     qDebug() << dir_trash;
@@ -277,11 +279,11 @@ void MainWindow::addMenus()
 
     connect(action_plugin_trash, &QAction::triggered, [=](bool b){
         if (b) {
-            pushButton_trash->show();
+            trashWidget->show();
             settings.setValue("isShowTrash", true);
             count_plugin++;
         } else {
-            pushButton_trash->hide();
+            trashWidget->hide();
             settings.setValue("isShowTrash", false);
             count_plugin--;
         }
@@ -315,11 +317,11 @@ void MainWindow::addMenus()
     });
 
     bool b = settings.value("isShowTrash", true).toBool();
-    if (b){
+    if (b) {
         action_plugin_trash->setChecked(true);
         count_plugin++;
     } else {
-        pushButton_trash->hide();
+        trashWidget->hide();
     }
 
     b = settings.value("isShowClock", true).toBool();
@@ -360,10 +362,9 @@ void MainWindow::resizeIcon(int w)
     for (int i=0; i<list_appWidget.count(); i++) {
         list_appWidget.at(i)->setFixedSize(size + QSize(w/10,w/10));
     }
-    pushButton_launcher->setFixedSize(size+ QSize(w/10,w/10));
+    pushButton_launcher->setFixedSize(size + QSize(w/10,w/10));
     pushButton_launcher->setIconSize(size);
-    pushButton_trash->setFixedSize(size+ QSize(w/10,w/10));
-    pushButton_trash->setIconSize(size);
+    trashWidget->setFixedSize(size + QSize(w/10,w/10));
     pushButton_desktop->setFixedSize(size+ QSize(w/10,w/10));
     pushButton_desktop->setIconSize(size);
     datetimeWidget->setFixedSize(size);
@@ -582,10 +583,12 @@ void MainWindow::trashChanged(QString path)
     QDir dir(dir_trash);
     int count = dir.entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot).count();
     if (count == 0) {
-        pushButton_trash->setToolTip("回收站");
-        pushButton_trash->setIcon(QIcon::fromTheme("user-trash"));
+        trashWidget->setToolTip("回收站");
+        trashWidget->pixmap_icon = QIcon::fromTheme("user-trash").pixmap(trashWidget->size());
     } else {
-        pushButton_trash->setToolTip("回收站 - " + QString::number(count) + "个文件");
-        pushButton_trash->setIcon(QIcon::fromTheme("user-trash-full"));
+        trashWidget->setToolTip("回收站 - " + QString::number(count) + "个文件");
+        trashWidget->pixmap_icon = QIcon::fromTheme("user-trash-full").pixmap(trashWidget->size());
     }
+    trashWidget->pixmap = trashWidget->pixmap_icon;
+    trashWidget->update();
 }

@@ -17,12 +17,14 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     datetimewidget.cpp \
     appwidget.cpp \
-    netspeedwidget.cpp
+    netspeedwidget.cpp \
+    trashwidget.cpp
 
 HEADERS  += mainwindow.h \
     datetimewidget.h \
     appwidget.h \
-    netspeedwidget.h
+    netspeedwidget.h \
+    trashwidget.h
 
 RESOURCES += \
     res.qrc
