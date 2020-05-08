@@ -77,6 +77,7 @@ void TrashWidget::dropEvent(QDropEvent *event)
         QProcess::startDetached("gio", QStringList() << "trash" << u.toString());
     }
     qDebug() << urls.size();
+    trashChanged("");
 }
 
 void TrashWidget::mousePressEvent(QMouseEvent *event)
