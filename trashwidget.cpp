@@ -4,13 +4,21 @@
 #include <QIcon>
 #include <QMimeData>
 #include <QDebug>
+#include <QFileSystemWatcher>
+#include <QDir>
 
 TrashWidget::TrashWidget(QWidget *parent) : QWidget(parent)
 {
     pixmap_icon = QIcon::fromTheme("user-trash").pixmap(size());
     pixmap = pixmap_icon;
-    pixmap_dragEnter = QPixmap(":/trash-open.png");
+    pixmap_dragEnter = QIcon::fromTheme("user-trash-full-opened").pixmap(size());
     setAcceptDrops(true);
+
+    QFileSystemWatcher *FSW = new QFileSystemWatcher;
+    dir_trash = QDir::homePath() + "/.local/share/Trash/files";
+    FSW->addPath(dir_trash);
+    connect(FSW, SIGNAL(directoryChanged(QString)), this, SLOT(trashChanged(QString)));
+    trashChanged("");
 }
 
 void TrashWidget::enterEvent(QEvent *event)
@@ -43,10 +51,12 @@ void TrashWidget::paintEvent(QPaintEvent *event)
 
 void TrashWidget::dragEnterEvent(QDragEnterEvent *event)
 {
-    Q_UNUSED(event);
-    pixmap = pixmap_dragEnter;
-    update();
-    event->acceptProposedAction();
+    qDebug() << event->mimeData();
+    if(event->mimeData()->hasFormat("text/uri-list")){
+        pixmap = pixmap_dragEnter;
+        update();
+        event->acceptProposedAction();
+    }
 }
 
 void TrashWidget::dragLeaveEvent(QDragLeaveEvent *event)
@@ -79,4 +89,20 @@ void TrashWidget::mouseReleaseEvent(QMouseEvent *event)
     if (point_mouse == QPoint(event->x(), event->y())) {
         QProcess::startDetached("gio", QStringList() << "open" << "trash:///");
     }
+}
+
+void TrashWidget::trashChanged(QString path)
+{
+    Q_UNUSED(path);
+    QDir dir(dir_trash);
+    int count = dir.entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot).count();
+    if (count == 0) {
+        setToolTip("回收站");
+        pixmap_icon = QIcon::fromTheme("user-trash").pixmap(size());
+    } else {
+        setToolTip("回收站 - " + QString::number(count) + "个文件");
+        pixmap_icon = QIcon::fromTheme("user-trash-full").pixmap(size());
+    }
+    pixmap = pixmap_icon;
+    update();
 }

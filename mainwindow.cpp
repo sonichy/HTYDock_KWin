@@ -8,7 +8,6 @@
 #include <QMenu>
 #include <QDebug>
 #include <QX11Info>
-#include <QFileSystemWatcher>
 #include <QDir>
 #include <KF5/KWindowSystem/KWindowSystem>
 #include <KF5/KWindowSystem/KWindowEffects>
@@ -65,17 +64,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     boxLayout->addStretch();
 
-    //pushButton_trash = new QPushButton(QIcon::fromTheme("user-trash"), NULL);
-    //pushButton_trash->setFixedSize(size + QSize(6,6));
-    //pushButton_trash->setIconSize(size);
-    //connect(pushButton_trash, &QPushButton::pressed, [](){
-         //QDesktopServices::openUrl(QUrl(QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/.local/share/Trash/files")); //真实地址
-    //    QProcess::startDetached("gio", QStringList() << "open" << "trash:///");
-    //});
     trashWidget = new TrashWidget;
     trashWidget->setFixedSize(size + QSize(6,6));
     trashWidget->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(trashWidget, &QPushButton::customContextMenuRequested, [=](){
+    connect(trashWidget, &QWidget::customContextMenuRequested, [=](){
         //[&](const QPoint& pos)
         QMenu *menu = new QMenu;
         menu->setStyleSheet("QMenu { color:white; background: rgba(0,0,0,100);}"
@@ -106,12 +98,6 @@ MainWindow::MainWindow(QWidget *parent)
         menu->exec(QPoint(x1, y1));
     });
     boxLayout->addWidget(trashWidget);
-    QFileSystemWatcher *FSW = new QFileSystemWatcher;
-    dir_trash = QDir::homePath() + "/.local/share/Trash/files";
-    qDebug() << dir_trash;
-    FSW->addPath(dir_trash);
-    connect(FSW, SIGNAL(directoryChanged(QString)), this, SLOT(trashChanged(QString)));
-    trashChanged("");
 
     datetimeWidget = new DatetimeWidget;
     datetimeWidget->setFixedSize(size + QSize(6,6));
@@ -575,20 +561,4 @@ void MainWindow::buttonClicked(AppWidget *appWidget)
             KWindowSystem::activateWindow(appWidget->wid);
         }
     }
-}
-
-void MainWindow::trashChanged(QString path)
-{
-    Q_UNUSED(path);
-    QDir dir(dir_trash);
-    int count = dir.entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot).count();
-    if (count == 0) {
-        trashWidget->setToolTip("回收站");
-        trashWidget->pixmap_icon = QIcon::fromTheme("user-trash").pixmap(trashWidget->size());
-    } else {
-        trashWidget->setToolTip("回收站 - " + QString::number(count) + "个文件");
-        trashWidget->pixmap_icon = QIcon::fromTheme("user-trash-full").pixmap(trashWidget->size());
-    }
-    trashWidget->pixmap = trashWidget->pixmap_icon;
-    trashWidget->update();
 }

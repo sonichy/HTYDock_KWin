@@ -15,6 +15,7 @@ private:
     bool isMouseOn = false;
     QPixmap pixmap_dragEnter;
     QPoint point_mouse;
+    QString dir_trash;
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -29,6 +30,8 @@ protected:
 signals:
 
 public slots:
+    void trashChanged(QString path);
+
 };
 
 #endif // TRASHWIDGET_H

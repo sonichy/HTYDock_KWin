@@ -22,7 +22,7 @@ public:
 
 private:
     int h, count_plugin=0;
-    QString qss, dir_trash, mode, position;
+    QString qss, mode, position;
     QWidget *widget_app;
     QPushButton *pushButton_launcher, *pushButton_desktop;
     QBoxLayout *boxLayout, *boxLayout_app;
@@ -41,7 +41,6 @@ private:
 
 private slots:
     void buttonClicked(AppWidget *appWidget);
-    void trashChanged(QString path);
     void windowAdded(WId wid);
     void windowRemoved(WId wid);
     void activeWindowChanged(WId wid);
