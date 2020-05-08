@@ -51,6 +51,7 @@ MainWindow::MainWindow(QWidget *parent)
     pushButton_launcher->setFixedSize(size + QSize(6,6));
     pushButton_launcher->setIconSize(size);
     pushButton_launcher->setToolTip("启动器");
+    pushButton_launcher->setFocusPolicy(Qt::NoFocus);
     connect(pushButton_launcher, &QPushButton::pressed, [](){
         QProcess::startDetached("HTYStartMenu");
     });
@@ -111,6 +112,7 @@ MainWindow::MainWindow(QWidget *parent)
     pushButton_desktop->setFixedSize(size + QSize(6,6));
     pushButton_desktop->setIconSize(size);
     pushButton_desktop->setToolTip("显示桌面");
+    pushButton_desktop->setFocusPolicy(Qt::NoFocus);
     connect(pushButton_desktop, &QPushButton::pressed, [](){
         KWindowSystem::setShowingDesktop(!KWindowSystem::showingDesktop());
     });
