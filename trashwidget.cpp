@@ -6,6 +6,10 @@
 #include <QDebug>
 #include <QFileSystemWatcher>
 #include <QDir>
+#include <QMenu>
+#include <QSettings>
+#include <QApplication>
+#include <QDesktopWidget>
 
 TrashWidget::TrashWidget(QWidget *parent) : QWidget(parent)
 {
@@ -19,6 +23,40 @@ TrashWidget::TrashWidget(QWidget *parent) : QWidget(parent)
     FSW->addPath(dir_trash);
     connect(FSW, SIGNAL(directoryChanged(QString)), this, SLOT(trashChanged(QString)));
     trashChanged("");
+
+    setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this, &QWidget::customContextMenuRequested, [=](){
+        //[&](const QPoint& pos)
+        QMenu *menu = new QMenu;
+        menu->setStyleSheet("QMenu { color:white; background: rgba(0,0,0,100);}"
+                            "QMenu::item:selected { background: rgba(48,140,198,255);}");
+        menu->setAttribute(Qt::WA_TranslucentBackground, true);
+        menu->setAutoFillBackground(true);
+        QAction *action_empty_trash = new QAction("清空", this);
+        connect(action_empty_trash, &QAction::triggered, [](){
+            QProcess::startDetached("gio", QStringList() << "trash" << "--empty");
+        });
+        menu->addAction(action_empty_trash);
+        menu->adjustSize();//不加会到屏幕中间
+        //menu->exec(mapToGlobal(pos));
+        int x1=0, y1=0;
+        QSettings settings(QApplication::organizationName(), QApplication::applicationName());
+        QString position = settings.value("Position", "Bottom").toString();
+        if (position == "Top") {
+            x1 = QPoint(mapToGlobal(QPoint(0,0))).x() + width()/2 - menu->width()/2;
+            y1 = height();
+        } else if (position == "Bottom") {
+            x1 = QPoint(mapToGlobal(QPoint(0,0))).x() + width()/2 - menu->width()/2;
+            y1 = QPoint(mapToGlobal(QPoint(0,0))).y() - menu->height();
+        } else if (position == "Left") {
+            x1 = width();
+            y1 = QPoint(mapToGlobal(QPoint(0,0))).y() + height()/2 - menu->height()/2;
+        } else if (position == "Right") {
+            x1 = QApplication::desktop()->width() - width() - menu->width();
+            y1 = QPoint(mapToGlobal(QPoint(0,0))).y() + height()/2 - menu->height()/2;
+        }
+        menu->exec(QPoint(x1, y1));
+    });
 }
 
 void TrashWidget::enterEvent(QEvent *event)

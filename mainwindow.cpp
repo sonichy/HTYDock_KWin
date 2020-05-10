@@ -15,7 +15,7 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    ,settings(QCoreApplication::organizationName(), QCoreApplication::applicationName())
+    ,settings(QApplication::organizationName(), QApplication::applicationName())
 {
     int w = settings.value("IconSize", 40).toInt();
     mode = settings.value("Mode", "Fashion").toString();
@@ -47,7 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
     widget->setLayout(boxLayout);
     setCentralWidget(widget);
 
-    pushButton_launcher = new QPushButton(QIcon(":/launcher.png"), NULL);
+    pushButton_launcher = new QPushButton(QIcon(":/launcher.png"), nullptr);
     pushButton_launcher->setFixedSize(size + QSize(6,6));
     pushButton_launcher->setIconSize(size);
     pushButton_launcher->setToolTip("启动器");
@@ -67,37 +67,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     trashWidget = new TrashWidget;
     trashWidget->setFixedSize(size + QSize(6,6));
-    trashWidget->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(trashWidget, &QWidget::customContextMenuRequested, [=](){
-        //[&](const QPoint& pos)
-        QMenu *menu = new QMenu;
-        menu->setStyleSheet("QMenu { color:white; background: rgba(0,0,0,100);}"
-                            "QMenu::item:selected { background: rgba(48,140,198,255);}");
-        menu->setAttribute(Qt::WA_TranslucentBackground, true);
-        menu->setAutoFillBackground(true);
-        QAction *action_empty_trash = new QAction("清空", this);
-        connect(action_empty_trash, &QAction::triggered, [](){
-            QProcess::startDetached("gio", QStringList() << "trash" << "--empty");
-        });
-        menu->addAction(action_empty_trash);
-        menu->adjustSize();//不加会到屏幕中间
-        //menu->exec(pushButton_trash->mapToGlobal(pos));
-        int x1, y1;
-        if (position == "Top") {
-            x1 = QPoint(trashWidget->mapToGlobal(QPoint(0,0))).x() + trashWidget->width()/2 - menu->width()/2;
-            y1 = height();
-        } else if (position == "Bottom") {
-            x1 = QPoint(trashWidget->mapToGlobal(QPoint(0,0))).x() + trashWidget->width()/2 - menu->width()/2;
-            y1 = y() - menu->height();
-        } else if (position == "Left") {
-            x1 = width();
-            y1 = QPoint(trashWidget->mapToGlobal(QPoint(0,0))).y() + trashWidget->height()/2 - menu->height()/2;
-        } else if (position == "Right") {
-            x1 = QApplication::desktop()->width() - width() - menu->width();
-            y1 = QPoint(trashWidget->mapToGlobal(QPoint(0,0))).y() + trashWidget->height()/2 - menu->height()/2;
-        }
-        menu->exec(QPoint(x1, y1));
-    });
     boxLayout->addWidget(trashWidget);
 
     datetimeWidget = new DatetimeWidget;
@@ -108,7 +77,7 @@ MainWindow::MainWindow(QWidget *parent)
     netSpeedWidget->setFixedSize(size + QSize(6,6));
     boxLayout->addWidget(netSpeedWidget);
 
-    pushButton_desktop = new QPushButton(QIcon::fromTheme("computer"), NULL);
+    pushButton_desktop = new QPushButton(QIcon::fromTheme("computer"), nullptr);
     pushButton_desktop->setFixedSize(size + QSize(6,6));
     pushButton_desktop->setIconSize(size);
     pushButton_desktop->setToolTip("显示桌面");

@@ -7,6 +7,7 @@
 #include <QSettings>
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QMenu>
 #include <QDebug>
 
 DatetimeWidget::DatetimeWidget(QWidget *parent) : QWidget(parent)
@@ -19,35 +20,64 @@ DatetimeWidget::DatetimeWidget(QWidget *parent) : QWidget(parent)
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
     timer->start(1000);
 
-    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
-    clock_type = settings.value("ClockType").toString();
-    if(clock_type == "")
-        clock_type = "TEXT_CLOCK";
-    QAction *action_text = new QAction("文字", this);
-    connect(action_text, &QAction::triggered, [=](){
-        clock_type = "TEXT_CLOCK";
-        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
-        settings.setValue("ClockType", clock_type);
-    });
-    addAction(action_text);
-    QAction *action_digital = new QAction("数字", this);
-    connect(action_digital, &QAction::triggered, [=](){
-        clock_type = "DIGITAL_CLOCK";
-        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
-        settings.setValue("ClockType", clock_type);
-    });
-    addAction(action_digital);
-    QAction *action_analog = new QAction("模拟", this);
-    connect(action_analog, &QAction::triggered, [=](){
-        clock_type = "ANALOG_CLOCK";
-        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
-        settings.setValue("ClockType", clock_type);
-    });
-    addAction(action_analog);
-    setContextMenuPolicy(Qt::ActionsContextMenu);
+    QSettings settings(QApplication::organizationName(), QApplication::applicationName());
+    clock_type = settings.value("ClockType", "TEXT_CLOCK").toString();
 
     calendar = new QCalendarWidget;
     calendar->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
+
+    setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this, &QWidget::customContextMenuRequested, [=](){
+        //[&](const QPoint& pos)
+        QMenu *menu = new QMenu;
+        menu->setStyleSheet("QMenu { color:white; background: rgba(0,0,0,100);}"
+                            "QMenu::item:selected { background: rgba(48,140,198,255);}");
+        menu->setAttribute(Qt::WA_TranslucentBackground, true);
+        menu->setAutoFillBackground(true);
+        QAction *action_text = new QAction("文字", this);
+        connect(action_text, &QAction::triggered, [=](){
+            clock_type = "TEXT_CLOCK";
+            QSettings settings(QApplication::organizationName(), QApplication::applicationName());
+            settings.setValue("ClockType", clock_type);
+            update();
+        });
+        menu->addAction(action_text);
+        QAction *action_digital = new QAction("数字", this);
+        connect(action_digital, &QAction::triggered, [=](){
+            clock_type = "DIGITAL_CLOCK";
+            QSettings settings(QApplication::organizationName(), QApplication::applicationName());
+            settings.setValue("ClockType", clock_type);
+            update();
+        });
+        menu->addAction(action_digital);
+        QAction *action_analog = new QAction("模拟", this);
+        connect(action_analog, &QAction::triggered, [=](){
+            clock_type = "ANALOG_CLOCK";
+            QSettings settings(QApplication::organizationName(), QApplication::applicationName());
+            settings.setValue("ClockType", clock_type);
+            update();
+        });
+        menu->addAction(action_analog);
+        menu->adjustSize();//不加会到屏幕中间
+        //menu->exec(mapToGlobal(pos));
+        int x1=0, y1=0;
+        QSettings settings(QApplication::organizationName(), QApplication::applicationName());
+        QString position = settings.value("Position", "Bottom").toString();
+        if (position == "Top") {
+            x1 = QPoint(mapToGlobal(QPoint(0,0))).x() + width()/2 - menu->width()/2;
+            y1 = height();
+        } else if (position == "Bottom") {
+            x1 = QPoint(mapToGlobal(QPoint(0,0))).x() + width()/2 - menu->width()/2;
+            y1 = QPoint(mapToGlobal(QPoint(0,0))).y() - menu->height();
+        } else if (position == "Left") {
+            x1 = width();
+            y1 = QPoint(mapToGlobal(QPoint(0,0))).y() + height()/2 - menu->height()/2;
+        } else if (position == "Right") {
+            x1 = QApplication::desktop()->width() - width() - menu->width();
+            y1 = QPoint(mapToGlobal(QPoint(0,0))).y() + height()/2 - menu->height()/2;
+        }
+        menu->exec(QPoint(x1, y1));
+    });
 }
 
 void DatetimeWidget::enterEvent(QEvent *event)
