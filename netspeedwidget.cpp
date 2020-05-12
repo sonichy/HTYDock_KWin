@@ -109,7 +109,9 @@ void NetSpeedWidget::paintEvent(QPaintEvent *event)
     tt = user + nice + sys + idle + iowait + irq + softirq;
     file.close();
     QString cusage = "";
-    int cp = ((tt-tt0)-(idle-idle0))*100/(tt-tt0);
+    int cp = 0;
+    if(tt != tt0)
+        cp = ((tt-tt0)-(idle-idle0))*100/(tt-tt0);
     if(i>0) cusage = "CPU: " + QString::number(cp) + "%";
     idle0 = idle;
     tt0 = tt;
@@ -147,18 +149,35 @@ void NetSpeedWidget::paintEvent(QPaintEvent *event)
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
+    //mouseover
     if (isMouseOn) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(QColor(255,255,255,30));
         painter.drawRoundRect(rect(), 50, 50);
     }
+    //内存使用率竖条
+    painter.setPen(Qt::gray);
+    if (mp < 90) {
+        painter.setBrush(QColor(0,255,0,150));
+    } else {
+        painter.setBrush(QColor(255,0,0,150));
+    }
+    painter.drawRect(rect().adjusted(0,height()*(100-mp)/100,-width()/2,0));
+    //CPU使用率竖条
+    if (cp < 90) {
+        painter.setBrush(QColor(0,255,0,150));
+    } else {
+        painter.setBrush(QColor(255,0,0,150));
+    }
+    painter.drawRect(rect().adjusted(width()/2,height()*(100-cp)/100,0,0));
+    //netspeed
     painter.setPen(Qt::white);
     QFont font = this->font();
     font.setFamily("Noto Mono");
     font.setPointSize(7);
     painter.setFont(font);
     painter.drawText(rect(), Qt::AlignCenter, netspeed);
-
+    //tooltip
     label->setText(startup + "\n" + uptime + "\n" + cusage + "\n" + mem + "\n" + net);
 }
 
