@@ -20,6 +20,9 @@ public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+protected:
+    void paintEvent(QPaintEvent *event);
+
 private:
     int h, count_plugin=0;
     QString qss, mode, position;

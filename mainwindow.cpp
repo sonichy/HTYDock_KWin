@@ -9,6 +9,8 @@
 #include <QDebug>
 #include <QX11Info>
 #include <QDir>
+#include <QBitmap>
+#include <QPainter>
 #include <KF5/KWindowSystem/KWindowSystem>
 #include <KF5/KWindowSystem/KWindowEffects>
 #include <KF5/KWindowSystem/netwm.h>
@@ -17,6 +19,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     ,settings(QApplication::organizationName(), QApplication::applicationName())
 {
+    setStyleSheet("background-color:white;");
     int w = settings.value("IconSize", 40).toInt();
     mode = settings.value("Mode", "Fashion").toString();
     position = settings.value("Position", "Bottom").toString();
@@ -386,8 +389,20 @@ void MainWindow::refit()
     qDebug() << position << x1 << y1 << w << h;
 
     //区域模糊
-    QRegion region(rect());
-    KWindowEffects::enableBlurBehind(winId(), true, region);
+    //QRegion region(rect());
+    //KWindowEffects::enableBlurBehind(winId(), true, region);
+    int r = qMin(width(), height()) / 3;
+//    QBitmap bitmap(width(), height());
+//    bitmap.fill();
+//    QPainter painter(&bitmap);
+//    //painter.setRenderHint(QPainter::Antialiasing, true);  //无效
+//    painter.setPen(Qt::NoPen);
+//    painter.setBrush(Qt::white);
+//    painter.drawRoundedRect(bitmap.rect(), r, r);
+//    setMask(bitmap);
+    QPainterPath PP;
+    PP.addRoundedRect(rect(), r, r);
+    KWindowEffects::enableBlurBehind(winId(), true, PP.toFillPolygon().toPolygon());
 
     //挤开桌面。为什么只需要3个参数？从各边减去width。
     NETExtendedStrut strut;
@@ -532,4 +547,15 @@ void MainWindow::buttonClicked(AppWidget *appWidget)
             KWindowSystem::activateWindow(appWidget->wid);
         }
     }
+}
+
+void MainWindow::paintEvent(QPaintEvent *event)
+{
+    Q_UNUSED(event);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(0,0,0,50));
+    int r = qMin(width(), height()) / 3;
+    painter.drawRoundedRect(rect(), r, r);
 }
