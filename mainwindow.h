@@ -37,7 +37,6 @@ private:
     DatetimeWidget *datetimeWidget;
     NetSpeedWidget *netSpeedWidget;
     TrashWidget *trashWidget;
-
     void addMenus();
     void refit();
     void resizeIcon(int w);

@@ -5,20 +5,32 @@
 #include <QPushButton>
 #include <QMouseEvent>
 #include <QTimer>
+#include <QBoxLayout>
+#include <QButtonGroup>
+
+struct Dock : QObjectUserData
+{
+    WId wid;
+};
 
 class AppWidget : public QWidget
 {
     Q_OBJECT
 public:
     explicit AppWidget(QWidget *parent = 0);
-    WId wid;
+    QList<WId> list_wid;
+    int index=0;
+    QButtonGroup *buttonGroup;
     QString name, className;
     QPixmap icon;
     bool isActive = false;
+    void addPreview(WId wid);
+    void removePreview(WId wid);
 
 private:
     bool isMouseOn = false;
-    QPushButton *pushButton_preview;
+    QWidget *widget_preview;
+    QBoxLayout *boxLayout;
     QPoint point_mouse;
     QTimer *timer;
 

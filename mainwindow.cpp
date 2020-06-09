@@ -40,9 +40,9 @@ MainWindow::MainWindow(QWidget *parent)
     setFixedHeight(h);
     QWidget *widget = new QWidget;
     QBoxLayout::Direction direction;
-    if (position == "Top" && position == "Bottom") {
+    if (position == "Top" || position == "Bottom") {
         direction = QBoxLayout::LeftToRight;
-    } else if (position == "Left" && position == "Right") {
+    } else if (position == "Left" || position == "Right") {
         direction = QBoxLayout::TopToBottom;
     }
     boxLayout = new QBoxLayout(direction);
@@ -92,7 +92,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(KWindowSystem::self(), &KWindowSystem::windowAdded, this, &MainWindow::windowAdded);
     connect(KWindowSystem::self(), &KWindowSystem::windowRemoved, this, &MainWindow::windowRemoved);
-    //connect(KWindowSystem::self(), static_cast<void(KWindowSystem::*)(WId, NET::Properties, NET::Properties2)>(&KWindowSystem::windowChanged), this, &MainWindow::windowChanged);
+    //这2个差不多
+    connect(KWindowSystem::self(), static_cast<void(KWindowSystem::*)(WId, NET::Properties, NET::Properties2)>(&KWindowSystem::windowChanged), this, &MainWindow::windowChanged);
     connect(KWindowSystem::self(), &KWindowSystem::activeWindowChanged, this, &MainWindow::activeWindowChanged);
 
     addMenus();
@@ -334,7 +335,7 @@ void MainWindow::resizeIcon(int w)
 
 void MainWindow::refit()
 {
-    qDebug() << count_plugin;
+    //qDebug() << count_plugin;
     int w, x1, y1;
     if (position == "Bottom") {
         boxLayout->setDirection(QBoxLayout::LeftToRight);
@@ -386,20 +387,12 @@ void MainWindow::refit()
     resize(w, h);
     setFixedSize(w, h);
     move(x1, y1);
-    qDebug() << position << x1 << y1 << w << h;
+    //qDebug() << position << x1 << y1 << w << h;
 
     //区域模糊
     //QRegion region(rect());
     //KWindowEffects::enableBlurBehind(winId(), true, region);
     int r = qMin(width(), height()) / 3;
-//    QBitmap bitmap(width(), height());
-//    bitmap.fill();
-//    QPainter painter(&bitmap);
-//    //painter.setRenderHint(QPainter::Antialiasing, true);  //无效
-//    painter.setPen(Qt::NoPen);
-//    painter.setBrush(Qt::white);
-//    painter.drawRoundedRect(bitmap.rect(), r, r);
-//    setMask(bitmap);
     QPainterPath PP;
     PP.addRoundedRect(rect(), r, r);
     KWindowEffects::enableBlurBehind(winId(), true, PP.toFillPolygon().toPolygon());
@@ -440,16 +433,28 @@ void MainWindow::windowAdded(WId wid)
         //qDebug() << winInfo.windowClassClass() << winInfo.windowType(NET::AllTypesMask);
         return;
     }
-    qDebug() << winInfo.name() << winInfo.windowClassClass(); // >=5.29 winInfo.desktopFileName();
+    qDebug() << winInfo.name() << winInfo.windowClassClass();
     if (winInfo.windowClassClass() == "")
         return;
+    for(int i=0; i<list_appWidget.count(); i++){
+        if(list_appWidget.at(i)->className == winInfo.windowClassClass()){
+            if(!list_appWidget.at(i)->list_wid.contains(wid)){
+                list_appWidget.at(i)->list_wid.append(wid);
+                list_appWidget.at(i)->addPreview(wid);
+                list_appWidget.at(i)->update();
+            }
+            return;
+        }
+    }
+
     AppWidget *appWidget = new AppWidget;
     appWidget->setFixedSize(size);
-    appWidget->wid = wid;
+    appWidget->list_wid.append(wid);
     appWidget->name = winInfo.name();
     appWidget->className = winInfo.windowClassClass();
     appWidget->icon = KWindowSystem::icon(wid);
     appWidget->setToolTip(winInfo.name());
+    appWidget->addPreview(wid);
     connect(appWidget, &AppWidget::clicked, [=](){
         buttonClicked(appWidget);
     });
@@ -491,15 +496,22 @@ void MainWindow::windowRemoved(WId wid)
 {
     for (int i=0; i<list_appWidget.count(); i++) {
         AppWidget *appWidget = list_appWidget.at(i);
-        if (appWidget->wid == wid) {
+        if (appWidget->list_wid.contains(wid)) {
             //qDebug() << dock->wid;
-            boxLayout_app->removeWidget(appWidget);
-            list_appWidget.removeAt(i);
-//            connect(appWidget, &AppWidget::destroyed, [=](){
-//                refit();
-//            });
-            appWidget->deleteLater();
-            refit();
+            if (appWidget->list_wid.count() > 1) {
+                appWidget->list_wid.removeOne(wid);
+                if(appWidget->index > 0)
+                    appWidget->index--;
+                appWidget->removePreview(wid);
+            } else {
+                boxLayout_app->removeWidget(appWidget);
+                list_appWidget.removeAt(i);
+                //connect(appWidget, &AppWidget::destroyed, [=](){
+                //    refit();
+                //});
+                appWidget->deleteLater();
+                refit();
+            }
         }
     }
 }
@@ -507,14 +519,14 @@ void MainWindow::windowRemoved(WId wid)
 void MainWindow::windowChanged(WId wid, NET::Properties properties, NET::Properties2 properties2)
 {
     KWindowInfo winInfo(wid, properties, properties2);
-    qDebug() << winInfo.name() << winInfo.windowClassClass();
+    //qDebug() << wid << winInfo.name() << winInfo.windowClassClass();// wid,空值,空值
 }
 
 void MainWindow::activeWindowChanged(WId wid)
 {
     for (int i=0; i<list_appWidget.count(); i++) {
         AppWidget *appWidget = list_appWidget.at(i);
-        if (appWidget->wid == wid) {
+        if (appWidget->list_wid.contains(wid)) {
             appWidget->isActive = true;
         } else {
             appWidget->isActive = false;
@@ -531,20 +543,24 @@ void MainWindow::buttonClicked(AppWidget *appWidget)
     }
     appWidget->isActive = true;
     appWidget->update();
-    KWindowInfo winInfo(appWidget->wid, NET::WMState | NET::XAWMState | NET::WMDesktop | NET::WMVisibleName);
-    appWidget->setToolTip(winInfo.name());//更新提示
+    KWindowInfo winInfo(appWidget->list_wid.at(appWidget->index), NET::WMState | NET::XAWMState | NET::WMDesktop | NET::WMVisibleName);
+    appWidget->setToolTip(winInfo.name());
     if (winInfo.isMinimized()) {
-        KWindowSystem::unminimizeWindow(appWidget->wid);
-        KWindowSystem::activateWindow(appWidget->wid);
+        KWindowSystem::unminimizeWindow(appWidget->list_wid.at(appWidget->index));
+        KWindowSystem::activateWindow(appWidget->list_wid.at(appWidget->index));
     } else {
-        if (KWindowSystem::activeWindow() == appWidget->wid) {
-            KWindowSystem::minimizeWindow(appWidget->wid);
-            for(int i=0; i<list_appWidget.count(); i++){
-                list_appWidget.at(i)->setProperty("class", "");
+        if (KWindowSystem::activeWindow() == appWidget->list_wid.at(appWidget->index)) {
+            if (appWidget->index < appWidget->list_wid.count() -1) {
+                appWidget->index++;
+                KWindowSystem::activateWindow(appWidget->list_wid.at(appWidget->index));
+            } else {
+                for(int i=0; i<appWidget->list_wid.count(); i++){
+                    KWindowSystem::minimizeWindow(appWidget->list_wid.at(i));
+                }
+                appWidget->index = 0;
             }
-            setStyleSheet(qss);
         } else {
-            KWindowSystem::activateWindow(appWidget->wid);
+            KWindowSystem::activateWindow(appWidget->list_wid.at(appWidget->index));
         }
     }
 }

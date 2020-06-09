@@ -7,12 +7,13 @@
 
 AppWidget::AppWidget(QWidget *parent) : QWidget(parent)
 {
-    pushButton_preview = new QPushButton;
-    pushButton_preview->setFixedSize(150,100);
-    pushButton_preview->setIconSize(pushButton_preview->size());
-    pushButton_preview->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
+    widget_preview = new QWidget;
+    boxLayout = new QBoxLayout(QBoxLayout::LeftToRight);
+    widget_preview->setLayout(boxLayout);
+    widget_preview->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
+    buttonGroup = new QButtonGroup;
     timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), pushButton_preview, SLOT(show()));
+    connect(timer, SIGNAL(timeout()), widget_preview, SLOT(show()));
     timer->setSingleShot(true);
 }
 
@@ -22,24 +23,28 @@ void AppWidget::enterEvent(QEvent *event)
     isMouseOn = true;
     update();
     QScreen *screen = QApplication::primaryScreen();
-    pushButton_preview->setIcon(QIcon(screen->grabWindow(wid,0,0,-1,-1).scaled(pushButton_preview->size(), Qt::KeepAspectRatio)));
+    for (int i=0; i<buttonGroup->buttons().count(); i++) {
+        QAbstractButton *button = buttonGroup->buttons().at(i);
+        Dock *dock = (Dock*)(button->userData(Qt::UserRole));
+        button->setIcon(QIcon(screen->grabWindow(dock->wid,0,0,-1,-1).scaled(widget_preview->size(), Qt::KeepAspectRatio)));
+    }
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     QString position = settings.value("Position", "Bottom").toString();
     int x1, y1;
     if (position == "Bottom") {
-        x1 = mapToGlobal(QPoint(0,0)).x() + width()/2 - pushButton_preview->width()/2;
-        y1 = mapToGlobal(QPoint(0,0)).y() - pushButton_preview->height();
+        x1 = mapToGlobal(QPoint(0,0)).x() + width()/2 - widget_preview->width()/2;
+        y1 = mapToGlobal(QPoint(0,0)).y() - widget_preview->height();
     } else if (position == "Top") {
-        x1 = mapToGlobal(QPoint(0,0)).x() + width()/2 - pushButton_preview->width()/2;
+        x1 = mapToGlobal(QPoint(0,0)).x() + width()/2 - widget_preview->width()/2;
         y1 = height();
     } else if (position == "Left") {
         x1 = width();
-        y1 = mapToGlobal(QPoint(0,0)).y() + height()/2 - pushButton_preview->height()/2;
+        y1 = mapToGlobal(QPoint(0,0)).y() + height()/2 - widget_preview->height()/2;
     } else if (position == "Right") {
-        x1 = QApplication::desktop()->width() - width() - pushButton_preview->width();
-        y1 = mapToGlobal(QPoint(0,0)).y() + height()/2 - pushButton_preview->height()/2;
+        x1 = QApplication::desktop()->width() - width() - widget_preview->width();
+        y1 = mapToGlobal(QPoint(0,0)).y() + height()/2 - widget_preview->height()/2;
     }
-    pushButton_preview->move(x1, y1);
+    widget_preview->move(x1, y1);
     timer->start(1000);
 }
 
@@ -48,10 +53,10 @@ void AppWidget::leaveEvent(QEvent *event)
     Q_UNUSED(event);
     isMouseOn = false;
     update();
-    if(pushButton_preview->isHidden())
+    if(widget_preview->isHidden())
         timer->stop();
     else
-        pushButton_preview->hide();
+        widget_preview->hide();
 }
 
 void AppWidget::paintEvent(QPaintEvent *event)
@@ -62,6 +67,7 @@ void AppWidget::paintEvent(QPaintEvent *event)
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.setPen(Qt::NoPen);
     if (isActive) {
+//渐变色失败
 //        QRadialGradient radialGradient(width()/2,height()/2,width()/3,width()/2,height()/2);
 //        radialGradient.setColorAt(0.0,Qt::white);
 //        radialGradient.setColorAt(1.0,Qt::blue);
@@ -74,15 +80,50 @@ void AppWidget::paintEvent(QPaintEvent *event)
         painter.drawRoundRect(rect(), 50, 50);
     }
     painter.drawPixmap(rect().adjusted(3,3,-3,-3), icon);
+    if (list_wid.count() > 1) {
+        painter.setBrush(QColor(255,0,0,100));
+        painter.drawEllipse(QRect(0,0,11,11));
+        painter.setPen(Qt::white);
+        QFont font = this->font();
+        font.setPointSize(6);
+        painter.setFont(font);
+        painter.drawText(QRect(0,0,10,10), Qt::AlignCenter, QString::number(list_wid.count()));
+    }
 }
 
 void AppWidget::mousePressEvent(QMouseEvent *event)
 {
     point_mouse = QPoint(event->x(), event->y());
-    pushButton_preview->hide();
+    widget_preview->hide();
 }
 
 void AppWidget::mouseReleaseEvent(QMouseEvent *ev)
 {
     if (point_mouse == QPoint(ev->x(), ev->y())) emit clicked();
+}
+
+void AppWidget::addPreview(WId wid)
+{
+    QPushButton *button = new QPushButton;
+    button->setFixedSize(150,100);
+    button->setIconSize(button->size());
+    Dock *dock = new Dock;
+    dock->wid = wid;
+    button->setUserData(Qt::UserRole, dock);
+    buttonGroup->addButton(button);
+    boxLayout->addWidget(button);
+}
+
+void AppWidget::removePreview(WId wid)
+{
+    for (int i=0; i<buttonGroup->buttons().count(); i++) {
+        QAbstractButton *button = buttonGroup->buttons().at(i);
+        Dock *dock = (Dock*)(button->userData(Qt::UserRole));
+        if (dock->wid == wid) {
+            //qDebug() << dock->wid;
+            boxLayout->removeWidget(button);
+            buttonGroup->removeButton(button);
+            button->deleteLater();
+        }
+    }
 }
