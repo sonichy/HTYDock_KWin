@@ -307,6 +307,13 @@ void MainWindow::addMenus()
     menu->addAction(action_plugin_netspeed);
     action->setMenu(menu);
     addAction(action);
+
+    action = new QAction("系统监视器", this);
+    connect(action, &QAction::triggered, []{
+        QProcess::startDetached("deepin-system-monitor");
+    });
+    addAction(action);
+
     setContextMenuPolicy(Qt::ActionsContextMenu);
 }
 
