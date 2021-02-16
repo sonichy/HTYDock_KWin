@@ -37,7 +37,7 @@ void NetSpeedWidget::enterEvent(QEvent *event)
     update();
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     QString position = settings.value("Position", "Bottom").toString();
-    int x1, y1;
+    int x1=0, y1=0;
     if (position == "Bottom") {
         x1 = mapToGlobal(QPoint(0,0)).x() + width()/2 - label->width()/2;
         y1 = mapToGlobal(QPoint(0,0)).y() - label->height();
@@ -92,7 +92,7 @@ void NetSpeedWidget::paintEvent(QPaintEvent *event)
     l = file.readLine();
     file.close();
     long mu = mt - ma;
-    int mp = mu*100/mt;
+    int mp = static_cast<int>(mu*100/mt);
     QString mem = "MEM: " + QString("%1 / %2 = %3").arg(KB(mu)).arg(KB(mt)).arg(QString::number(mp) + "%");
 
     // CPU
@@ -110,9 +110,10 @@ void NetSpeedWidget::paintEvent(QPaintEvent *event)
     file.close();
     QString cusage = "";
     int cp = 0;
-    if(tt != tt0)
-        cp = ((tt-tt0)-(idle-idle0))*100/(tt-tt0);
-    if(i>0) cusage = "CPU: " + QString::number(cp) + "%";
+    if (tt != tt0)
+        cp = static_cast<int>(((tt-tt0)-(idle-idle0))*100/(tt-tt0));
+    if (i > 0)
+        cusage = "CPU: " + QString::number(cp) + "%";
     idle0 = idle;
     tt0 = tt;
 
@@ -210,19 +211,19 @@ QString NetSpeedWidget::NB(long b)
 QString NetSpeedWidget::BS(long b)
 {
     QString s = "";
-    if(b > 999999999){
+    if (b > 999999999) {
         //s = QString("%1").arg(b/(1024*1024*1024.0), 6, 'f', 2, QLatin1Char(' ')) + "GB";
         s = QString::number(b/(1024*1024*1024.0), 'f', 2) + "GB";
-    }else{
-        if(b > 999999){
+    } else {
+        if (b > 999999) {
             //s = QString("%1").arg(b/(1024*1024.0), 6, 'f', 2, QLatin1Char(' ')) + "MB";
             s = QString::number(b/(1024*1024.0), 'f', 2) + "MB";
-        }else{
-            if(b>999){
+        } else {
+            if (b > 999) {
                 //s = QString("%1").arg(b/1024.0, 6, 'f', 2, QLatin1Char(' ')) + "KB";
                 s = QString::number(b/(1024.0), 'f',2) + "KB";
-            }else{
-                s = b + "B";
+            } else {
+                s = QString::number(b) + "B";
             }
         }
     }

@@ -39,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     KWindowSystem::setType(winId(), NET::Dock);
     setFixedHeight(h);
     QWidget *widget = new QWidget;
-    QBoxLayout::Direction direction;
+    QBoxLayout::Direction direction = QBoxLayout::LeftToRight;
     if (position == "Top" || position == "Bottom") {
         direction = QBoxLayout::LeftToRight;
     } else if (position == "Left" || position == "Right") {
@@ -343,7 +343,7 @@ void MainWindow::resizeIcon(int w)
 void MainWindow::refit()
 {
     //qDebug() << count_plugin;
-    int w, x1, y1;
+    int w=0, x1=0, y1=0;
     if (position == "Bottom") {
         boxLayout->setDirection(QBoxLayout::LeftToRight);
         boxLayout_app->setDirection(QBoxLayout::LeftToRight);
@@ -397,11 +397,11 @@ void MainWindow::refit()
     //qDebug() << position << x1 << y1 << w << h;
 
     //区域模糊
-    //QRegion region(rect());
+    //QRegion region(rect());   //矩形
     //KWindowEffects::enableBlurBehind(winId(), true, region);
     int r = qMin(width(), height()) / 3;
     QPainterPath PP;
-    PP.addRoundedRect(rect(), r, r);
+    PP.addRoundedRect(rect(), r, r);    //圆角矩形
     KWindowEffects::enableBlurBehind(winId(), true, PP.toFillPolygon().toPolygon());
 
     //挤开桌面。为什么只需要3个参数？从各边减去width。
@@ -474,11 +474,11 @@ void MainWindow::windowAdded(WId wid)
         menu->setAutoFillBackground(true);
         QAction *action_close = new QAction("关闭", this);
         connect(action_close, &QAction::triggered, [=](){
-            NETRootInfo(QX11Info::connection(), NET::CloseWindow).closeWindowRequest(wid);
+            NETRootInfo(QX11Info::connection(), NET::CloseWindow).closeWindowRequest(static_cast<uint32_t>(wid));
         });
         menu->addAction(action_close);
         menu->adjustSize();//不加会到屏幕中间
-        int x1, y1;
+        int x1=0, y1=0;
         if (position == "Top") {
             x1 = QPoint(appWidget->mapToGlobal(QPoint(0,0))).x() + appWidget->width()/2 - menu->width()/2;
             y1 = height();

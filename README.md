@@ -1,4 +1,6 @@
 基于 Qt 和 KWindowSystem（窗管、背景模糊）的 Dock 程序。  
+已编译的 HTYDock 适用 64 位 Linux Qt>5.11。
+
 ![alt](preview.png)
 ### 运行依赖
 libkf5windowsystem5

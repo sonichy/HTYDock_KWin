@@ -25,12 +25,12 @@ void AppWidget::enterEvent(QEvent *event)
     QScreen *screen = QApplication::primaryScreen();
     for (int i=0; i<buttonGroup->buttons().count(); i++) {
         QAbstractButton *button = buttonGroup->buttons().at(i);
-        Dock *dock = (Dock*)(button->userData(Qt::UserRole));
+        Dock *dock = static_cast<Dock*>(button->userData(Qt::UserRole));
         button->setIcon(QIcon(screen->grabWindow(dock->wid,0,0,-1,-1).scaled(widget_preview->size(), Qt::KeepAspectRatio)));
     }
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     QString position = settings.value("Position", "Bottom").toString();
-    int x1, y1;
+    int x1=0, y1=0;
     if (position == "Bottom") {
         x1 = mapToGlobal(QPoint(0,0)).x() + width()/2 - widget_preview->width()/2;
         y1 = mapToGlobal(QPoint(0,0)).y() - widget_preview->height();
@@ -72,8 +72,10 @@ void AppWidget::paintEvent(QPaintEvent *event)
 //        radialGradient.setColorAt(0.0,Qt::white);
 //        radialGradient.setColorAt(1.0,Qt::blue);
 //        painter.setBrush(QBrush(radialGradient));
-        painter.setBrush(QColor(48,140,198,200));
-        painter.drawRect(rect().adjusted(10, height()-2, -10, 0));
+        //painter.setBrush(QColor(48,140,198,200));//下划线
+        //painter.drawRect(rect().adjusted(10, height()-2, -10, 0));
+        painter.setBrush(QColor(255,255,255,30));//蒙板
+        painter.drawRoundRect(rect(), 50, 50);
     }
     if (isMouseOn) {
         painter.setBrush(QColor(255,255,255,30));
@@ -99,7 +101,8 @@ void AppWidget::mousePressEvent(QMouseEvent *event)
 
 void AppWidget::mouseReleaseEvent(QMouseEvent *ev)
 {
-    if (point_mouse == QPoint(ev->x(), ev->y())) emit clicked();
+    if (point_mouse == QPoint(ev->x(), ev->y()))
+        emit clicked();
 }
 
 void AppWidget::addPreview(WId wid)
@@ -118,7 +121,7 @@ void AppWidget::removePreview(WId wid)
 {
     for (int i=0; i<buttonGroup->buttons().count(); i++) {
         QAbstractButton *button = buttonGroup->buttons().at(i);
-        Dock *dock = (Dock*)(button->userData(Qt::UserRole));
+        Dock *dock = static_cast<Dock*>(button->userData(Qt::UserRole));
         if (dock->wid == wid) {
             //qDebug() << dock->wid;
             boxLayout->removeWidget(button);
